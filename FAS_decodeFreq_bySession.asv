@@ -26,6 +26,7 @@ MDLall = cell(nIter,length(sessIDs),length(gammaSteps),length(deltaSteps),2); % 
 CVEall = zeros(nIter,length(sessIDs),length(gammaSteps),length(deltaSteps),2);
 PCFall = cell(nIter,length(sessIDs),length(gammaSteps),length(deltaSteps),2); % (nj,ns,ng,nd)
 
+
 for ns = 1:length(sessIDs) %nt = 1 : length(selType)
     locSess = char(sessIDs(ns)); % local session name 'm000_00'
     locIdx = is.mouseNum(:,strcmp(mouseNums,locSess(1:4))); % all neurons/rows from this mouse
@@ -40,9 +41,7 @@ for ns = 1:length(sessIDs) %nt = 1 : length(selType)
     
     % loc cell types within session
     % ! PV or SOM, one of these arrays is always empty, sometimes EXC is empty
-
-    % DATASET 1 FREQUENCY SELECTIVE NEURONS
-    if multiAmp == true && onlyFreqSel == true
+    if multiAmp == true && onlyFreqSel == true % DATASET1
         locPVs = find(is.sessID(:,ns) & is.PV & is.allMod); % loc neurons from this session
         locSOMs = find(is.sessID(:,ns) & is.SOM & is.allMod);
         locEXCs = find(is.sessID(:,ns) & is.EXC & is.allMod);
@@ -50,7 +49,6 @@ for ns = 1:length(sessIDs) %nt = 1 : length(selType)
         otherPVs = find(locIdx & is.PV & is.allMod); % loc neurons from this mouse (but not this session)
         otherSOMs = find(locIdx & is.SOM & is.allMod);
         otherEXCs = find(locIdx & is.EXC  & is.allMod);
-    % DATASET 2 FREQUENCY SELECTIVE NEURONS
     elseif multiAmp == false && onlyFreqSel == true
         locPVs = find(is.sessID(:,ns) & is.PV & is.selective); % loc neurons from this session
         locSOMs = find(is.sessID(:,ns) & is.SOM & is.selective);
@@ -59,24 +57,22 @@ for ns = 1:length(sessIDs) %nt = 1 : length(selType)
         otherPVs = find(locIdx & is.PV & is.selective); % loc neurons from this mouse (but not this session)
         otherSOMs = find(locIdx & is.SOM & is.selective);
         otherEXCs = find(locIdx & is.EXC & is.selective);
-    % DATASET 1 ALL NEURONS
     elseif multiAmp == true && onlyFreqSel == false
-        locPVs = find(is.sessID(:,ns) & is.PV); % loc neurons from this session
-        locSOMs = find(is.sessID(:,ns) & is.SOM);
-        locEXCs = find(is.sessID(:,ns) & is.EXC);
+        locPVs = find(is.sessID(:,ns) & is.PV & is.allMod); % loc neurons from this session
+        locSOMs = find(is.sessID(:,ns) & is.SOM & is.allMod);
+        locEXCs = find(is.sessID(:,ns) & is.EXC & is.allMod);
         locNumINH = length(locPVs) + length(locSOMs);
-        otherPVs = find(locIdx & is.PV); % loc neurons from this mouse (but not this session)
-        otherSOMs = find(locIdx & is.SOM); 
-        otherEXCs = find(locIdx & is.EXC); 
-    % DATASET 2 ALL NEURONS
+        otherPVs = find(locIdx & is.PV & is.allMod); % loc neurons from this mouse (but not this session)
+        otherSOMs = find(locIdx & is.SOM & is.allMod); 
+        otherEXCs = find(locIdx & is.EXC  & is.allMod); 
     elseif multiAmp == false && onlyFreqSel == false 
-        locPVs = find(is.sessID(:,ns) & is.PV); % loc neurons from this session
-        locSOMs = find(is.sessID(:,ns) & is.SOM); 
-        locEXCs = find(is.sessID(:,ns) & is.EXC); 
+        locPVs = find(is.sessID(:,ns) & is.PV & is.selective); % loc neurons from this session
+        locSOMs = find(is.sessID(:,ns) & is.SOM & is.selective); 
+        locEXCs = find(is.sessID(:,ns) & is.EXC & is.selective); 
         locNumINH = length(locPVs) + length(locSOMs);
-        otherPVs = find(locIdx & is.PV ); % loc neurons from this mouse (but not this session)
-        otherSOMs = find(locIdx & is.SOM);
-        otherEXCs = find(locIdx & is.EXC);
+        otherPVs = find(locIdx & is.PV & is.selective); % loc neurons from this mouse (but not this session)
+        otherSOMs = find(locIdx & is.SOM & is.selective);
+        otherEXCs = find(locIdx & is.EXC & is.selective);
     end
 
     % count of neurons within this session

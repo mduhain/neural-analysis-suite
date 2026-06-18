@@ -1,15 +1,10 @@
 
 
-%% load
+%% load in datasets
 
-% CHANGE DIRECTORIES
-% cd('C:\Users\ramirezlab\Box\Tactile_Synchrony\2P-Data\Cleaned'); % LAB MACHINES
-% cd('Y:\Michael\Haptics-2P\Reports'); % LAB MACHINES
-if ismac
-    cd('/Users/mduhain/Library/CloudStorage/Box-Box/Tactile_Synchrony/2P-Data/Cleaned/datasets');
-else
-    cd('D:\Tactile_Synchrony\2P-Data\Cleaned\datasets');
-end
+% CHANGE DIRECTORIES (USER ADJUST)
+cd('D:\Tactile_Synchrony\2P-Data\Cleaned\datasets');
+
 
 % LOAD DATASET 1
 % tic; load('dataset1_lightweight.mat'); toc;
