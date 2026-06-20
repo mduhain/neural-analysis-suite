@@ -130,32 +130,23 @@ selTypes = ["freq","amp","dual","inter"];
 selTypesNames = ["Freq.Sel.","Amp.Sel."];
 xVals = [1 2 3; 5 6 7];
 for nc = 1 : length(cellType)
-    locName1 = strcat(selTypes(1),cellType(nc)); % F
-    locName2 = strcat(selTypes(2),cellType(nc)); % A
-    locName3 = strcat(selTypes(3),cellType(nc)); % F+A
-    locName4 = strcat(selTypes(4),cellType(nc)); % F*A
     % FREQUENCY SELECTIVE (F, F+A, or F*A)
-    locSum = num.(locName1) + num.(locName3) + num.(locName4);
+    locName1 = strcat(selTypes(2),cellType(nc)); % F
+    locName3 = strcat(selTypes(4),cellType(nc)); % F+A
+    locName3 = strcat(selTypes(5),cellType(nc)); % F*A
+    locSum = num.(locName1) + num.(locName2) + num.(locName3);
     yVal = locSum /num.(cellType(nc)) * 100; 
     ySE = mannyPropSTD(locSum,num.(cellType(nc))) * 100;
-    bar(xVals(1,nc),yVal,'FaceColor',colors.(cellType(nc)))
-    text(xVals(1,nc),0,strcat(" n=",num2str(locSum)),'HorizontalAlignment',...
+    bar(xVals(ns,nc),yVal,'FaceColor',colors.(cellType(nc)))
+    text(xVals(ns,nc),0,strcat(" n=",num2str(locSum)),'HorizontalAlignment',...
          'left','VerticalAlignment','middle','FontName','Arial','FontSize',8,'Rotation',90,'Color',[1 1 1]);
-    errorbar(xVals(1,nc),yVal,ySE,Color=[0,0,0],LineWidth=1);
-    % AMPLITUDE SELECTIVE (F, F+A, or F*A)
-    locSum = num.(locName2) + num.(locName3) + num.(locName4);
-    yVal = locSum /num.(cellType(nc)) * 100; 
-    ySE = mannyPropSTD(locSum,num.(cellType(nc))) * 100;
-    bar(xVals(2,nc),yVal,'FaceColor',colors.(cellType(nc)))
-    text(xVals(2,nc),0,strcat(" n=",num2str(locSum)),'HorizontalAlignment',...
-         'left','VerticalAlignment','middle','FontName','Arial','FontSize',8,'Rotation',90,'Color',[1 1 1]);
-    errorbar(xVals(2,nc),yVal,ySE,Color=[0,0,0],LineWidth=1);
+    errorbar(xVals(ns,nc),yVal,ySE,Color=[0,0,0],LineWidth=1);
 end
-legend(["PV","","","","SOM","","","","EXC"],'box','off','FontName','Arial','location','northeast');
+legend(["PV","","SOM","","EXC"],'box','off','FontName','Arial','location','northeast');
 ylabel('Percentage of neurons','FontName','Arial');
 xlabel('Effect type (2-way ANOVA)','FontName','Arial');
 title("Response properties of all neurons by cell type",'FontName','Arial');
-set(gca,'XTick',xVals(:,2),'XTickLabels',selTypesNames,'YLim',[20 40]);
+set(gca,'XTick',xVals(:,2),'XTickLabels',selTypesNames,'YLim',[0 20]);
 
 %% NEURON SELECTIVITY CDFs
 

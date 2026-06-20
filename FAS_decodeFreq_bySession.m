@@ -14,9 +14,9 @@ neuStepSize = 15; % Num neurons to add to model each step
 gammaSteps = 0; % Gamma value(s) for LDA
 deltaSteps = 0; % Delta values(s) for LDA; [0, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1];
 targetAmp = 5; % Amplitude value to decode with; [0.33 0.76 1.6 3.5 7.7] um
-onlyEXC = false; % Decoding with only EXC neurons in sessions
+onlyEXC = true; % Decoding with only EXC neurons in sessions
 lateRespWin = false; % Decoding using the later response window (3-4 sec post-stim)
-onlyFreqSel = true; % Decoding with only frequency-selective units
+onlyFreqSel = false; % Decoding with only frequency-selective units
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
