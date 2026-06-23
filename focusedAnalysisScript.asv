@@ -321,7 +321,6 @@ load('dataset2_forFigures.mat');
 
 
 % addpath('C:\Users\skich\Box\Tactile_Synchrony\Haptics-2P\Analysis');
-% cd('C:\Users\skich\Documents\GitHub\neural-analysis-suite');
 
 % % ANALYSIS SCRIPS
 %

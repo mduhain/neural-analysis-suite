@@ -699,8 +699,8 @@ for nf = 1 : size(PCTall,1) % loop frequency (5)
 end
 set(gca,'XTick',1:5,'XTickLabels',freqValAll);
 xlabel('Frequency (Hz)','FontName','Arial');
-ylabel({'Average prediction error','(predicted - true)'},'FontName','Arial');
-title('Amplitude decoding bias','FontName','Arial');
+ylabel('','FontName','Arial');
+
 
 
 
