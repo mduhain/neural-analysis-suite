@@ -50,8 +50,8 @@ PCTall = zeros(nFreq,nIter,length(selType),numCellDraws,length(cellType)); % (na
 % MDLall = cell(nIter,length(selType),length(nCellDraws),length(cellType)); % (nj,nt,nd,nc)
 MDLall = cell(nFreq,nIter,length(selType),numCellDraws,length(cellType)); % (na,nj,nt,nd,nc)
 
-predFreqAll = cell(nFreq,nIter,length(selType),numCellDraws,length(cellType));
-testFreqAll = cell(nFreq,nIter,length(selType),numCellDraws,length(cellType));
+predAmpAll = cell(nFreq,nIter,length(selType),numCellDraws,length(cellType));
+testAmpAll = cell(nFreq,nIter,length(selType),numCellDraws,length(cellType));
 
 
 
@@ -174,8 +174,8 @@ for nt = 1 : length(selType) %nd = 1 : length(nCellDraws)
     
             % collect output
             PCTall(nf,nj,nt,nd,nc) = mean(predAmp == testAmp); %accuracy
-            predFreqAll{nf,nj,nt,nd,nc} = predAmp;
-            testFreqAll{nf,nj,nt,nd,nc} = testAmp;
+            predAmpAll{nf,nj,nt,nd,nc} = predAmp;
+            testAmpAll{nf,nj,nt,nd,nc} = testAmp;
             MDLall{nf,nj,nt,nd,nc} = mdl;
         end 
     end
@@ -684,8 +684,8 @@ figure('Color',[1 1 1]); hold on;
 for nf = 1 : size(PCTall,1) % loop frequency (5)
     for nc = 1 : size(PCTall,5) % loop Cell Type (3)
         for ni = 1 : size(PCTall,2) % loop nIter (200)
-            locPredVals = predFreqAll{nf,ni,targSel,1,nc}; % predicted amplitudes
-            locTrueVals = testFreqAll{nf,ni,targSel,1,nc}; % true amplitudes
+            locPredVals = predAmpAll{nf,ni,targSel,1,nc}; % predicted amplitudes
+            locTrueVals = testAmpAll{nf,ni,targSel,1,nc}; % true amplitudes
             locDiffs = locPredVals - locTrueVals; % differences (predicted - true)
             locDiffs(locDiffs == 0) = []; % remove correct values (0)
             allDiffs(nf,ni,targSel,nc) = mean(locDiffs);

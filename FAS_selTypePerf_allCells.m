@@ -56,7 +56,7 @@ selType = ["FreqMod","AmpMod","DualMod","InterMod"];
 % is.all = true(nCellTotal,1);
 % selType = "all";
 neuStepSize = 5; % num neurons to add to model each step
-nCellDraws = 60; % over-estimation to poulate arrays
+nCellDraws = 1; % over-estimation to poulate arrays
 maxDrawEXC = 120; % 2 SelTypes: FreqVsRandom (300), 4 SelTypes: Freq,Amp,Dual,Inter (120)
 
 % FIGURE CREATION
@@ -72,6 +72,9 @@ PCTall = zeros(nAmp,nIter,length(selType),nCellDraws,length(cellType)); % (na,nj
 % MDLall = cell(nIter,length(selType),length(nCellDraws),length(cellType)); % (nj,nt,nd,nc)
 MDLall = cell(nAmp,nIter,length(selType),nCellDraws,length(cellType)); % (na,nj,nt,nd,nc)
 
+predFreqAll = cell(nFreq,nIter,length(selType),numCellDraws,length(cellType));
+testFreqAll = cell(nFreq,nIter,length(selType),numCellDraws,length(cellType));
+
 % % Create output structure for storing PCA information
 % PC = struct();
 % for nc = 1 : length(cellType)
@@ -79,7 +82,7 @@ MDLall = cell(nAmp,nIter,length(selType),nCellDraws,length(cellType)); % (na,nj,
 % end
 
 
-for na = 5:5 %1 : nAmp %numAmps
+for na = 1 : nAmp %numAmps
 targetAmp = na;
 % na = targetAmp; %only use one amplitude
 disp(strcat("Amp: ",num2str(ampValAll(na))));
@@ -100,7 +103,11 @@ for nt = 1 : length(selType) %nd = 1 : length(nCellDraws)
     if useFreqEffNeu == false
         maxNeuAvail = 120;
     end
-    nCellDraws = kComp : neuStepSize : maxNeuAvail;
+    if numCellDraws == 1
+        nCellDraws = maxNeuAvail;
+    else
+        nCellDraws = kComp:neuStepSize:maxNeuAvail;
+    end
     trainTrial = round(minTrialNum*trainPortion);
     testTrial = round(minTrialNum*(1-trainPortion));
     trainFreq = repmat(freqVal,trainTrial,1);
@@ -201,6 +208,9 @@ for nt = 1 : length(selType) %nd = 1 : length(nCellDraws)
             % collect output
             PCTall(na,nj,nt,nd,nc) = mean(predFreq == testFreq); % accuracy
             MDLall{na,nj,nt,nd,nc} = mdl; % model parameters
+            predFreqAll{na,nj,nt,nd,nc} = predFreq;
+            testFreqAll{na,nj,nt,nd,nc} = testFreq;
+
         end 
     end
     fprintf(newline)
@@ -1127,5 +1137,34 @@ legend('Location', 'best');
 
 
 
+%% Over/Under prediction analysis
 
+% cd('D:\Tactile_Synchrony\2P-Data\Cleaned\datasets');
+% load('modelResults_dataset2_ampDecode_predictionAnalysis.mat'); % 'PCTall','MDLall','predFreqAll','testFreqAll'
+% % dimension IDs: nFreq, nIter, selType, 1, cellType
 
+targSel = 2;
+xSp = [-0.2 0 0.2]; % x-axis plot spacing
+allDiffs = zeros(size(PCTall,1),size(PCTall,2),size(PCTall,3),size(PCTall,5)); % 5 x 200 x 4 x 3
+
+figure('Color',[1 1 1]); hold on;
+for na = 1 : size(PCTall,1) % loop amplitude (5)
+    for nc = 1 : size(PCTall,5) % loop Cell Type (3)
+        for ni = 1 : size(PCTall,2) % loop nIter (200)
+            locPredVals = predFreqAll{na,ni,targSel,1,nc}; % predicted amplitudes
+            locTrueVals = testFreqAll{na,ni,targSel,1,nc}; % true amplitudes
+            locDiffs = locPredVals - locTrueVals; % differences (predicted - true)
+            locDiffs(locDiffs == 0) = []; % remove correct values (0)
+            allDiffs(na,ni,targSel,nc) = mean(locDiffs);
+        end
+        locX = na + xSp(nc); % x-position
+        locY = mean(squeeze(allDiffs(na,:,targSel,nc)),'omitnan'); % average difference
+        locCI = mkCI(squeeze(allDiffs(na,:,targSel,nc))); % 95 percent condifidence intervals
+        errorbar(locX,locY,locY-locCI(1),'vertical','Color',colors.(cellType(nc)));
+        plot(locX,locY,'.','Color',colors.(cellType(nc)));
+    end
+end
+set(gca,'XTick',1:5,'XTickLabels',ampValAll);
+xlabel('Amplitude (\mum)','FontName','Arial');
+ylabel({'Average prediction error','(predicted - true)'},'FontName','Arial');
+title('Frequency decoding bias','FontName','Arial');
