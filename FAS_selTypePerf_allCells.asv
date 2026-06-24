@@ -1151,7 +1151,7 @@ legend('Location', 'best');
 % load('modelResults_dataset2_ampDecode_predictionAnalysis.mat'); % 'PCTall','MDLall','predFreqAll','testFreqAll'
 % % dimension IDs: nFreq, nIter, selType, 1, cellType
 
-targSel = 1;
+targSel = 2;
 xSp = [-0.2 0 0.2]; % x-axis plot spacing
 allDiffs = zeros(size(PCTall,1),size(PCTall,2),size(PCTall,3),size(PCTall,5)); % 5 x 200 x 4 x 3
 
@@ -1177,3 +1177,35 @@ xlabel('Amplitude (\mum)','FontName','Arial');
 ylabel({'Average prediction error','(predicted - true)'},'FontName','Arial');
 title('Frequency decoding bias','FontName','Arial');
 
+
+%% Over/Under prediction analysis: all frequency selective
+
+% cd('D:\Tactile_Synchrony\2P-Data\Cleaned\datasets');
+% load('modelResults_dataset2_ampDecode_predictionAnalysis.mat'); % 'PCTall','MDLall','predFreqAll','testFreqAll'
+% % dimension IDs: nFreq, nIter, selType, 1, cellType
+
+targSel = 1;
+xSp = [-0.2 0 0.2]; % x-axis plot spacing
+allDiffs = zeros(size(PCTall,1),size(PCTall,2),size(PCTall,3),size(PCTall,5)); % 5 x 200 x 4 x 3
+
+figure('Color',[1 1 1]); hold on;
+for na = 1 : size(PCTall,1) % loop amplitude (5)
+    for nc = 1 : size(PCTall,5) % loop Cell Type (3)
+        for ni = 1 : size(PCTall,2) % loop nIter (200)
+            locPredVals = predFreqAll{na,ni,targSel,1,nc}; % predicted amplitudes
+            locTrueVals = testFreqAll{na,ni,targSel,1,nc}; % true amplitudes
+            locDiffs = locPredVals - locTrueVals; % differences (predicted - true)
+            locDiffs(locDiffs == 0) = []; % remove correct values (0)
+            allDiffs(na,ni,targSel,nc) = mean(locDiffs);
+        end
+        locX = na + xSp(nc); % x-position
+        locY = mean(squeeze(allDiffs(na,:,targSel,nc)),'omitnan'); % average difference
+        locCI = mkCI(squeeze(allDiffs(na,:,targSel,nc))); % 95 percent condifidence intervals
+        errorbar(locX,locY,locY-locCI(1),'vertical','Color',colors.(cellType(nc)));
+        plot(locX,locY,'.','Color',colors.(cellType(nc)));
+    end
+end
+set(gca,'XTick',1:5,'XTickLabels',ampValAll);
+xlabel('Amplitude (\mum)','FontName','Arial');
+ylabel({'Average prediction error','(predicted - true)'},'FontName','Arial');
+title('Frequency decoding bias','FontName','Arial');

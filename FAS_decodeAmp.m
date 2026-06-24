@@ -28,14 +28,19 @@ cellType = ["PV","SOM","EXC"]; % order for plotting
 selType = ["FreqMod","AmpMod","DualMod","InterMod"]; 
 
 % % AMP SEL VS RANDOM DRAWS
-%v is.allMod = (is.AmpMod | is.DualMod | is.InterMod);
+is.allMod = (is.AmpMod | is.DualMod | is.InterMod) & ~is.trained;
 % vis.any = true(size(is.allMod));
 % selType = ["allMod","any"];
-% selType = ["allMod"];
+selType = "allMod";
 
 neuStepSize = 5; % num neurons to add to model each step
 numCellDraws = 1; % over-estimation to poulate arrays 60 (amp.sel vs. random) or 22 (4 sel types)
-maxDraw = 120; % 300 (amp.sel v. random), 120 (each of 4 sel types)
+
+if length(selType) <= 2
+    maxDraw = 160; % 2 SelTypes: FreqVsRandom (300), 
+elseif length(selType) == 4 
+    maxDraw = 120; % 4 SelTypes: Freq,Amp,Dual,Inter (120)
+end
 
 % FIGURE CREATION
 % figure('Color',[1 1 1],'Theme','Light'); hold on;
@@ -52,7 +57,6 @@ MDLall = cell(nFreq,nIter,length(selType),numCellDraws,length(cellType)); % (na,
 
 predAmpAll = cell(nFreq,nIter,length(selType),numCellDraws,length(cellType));
 testAmpAll = cell(nFreq,nIter,length(selType),numCellDraws,length(cellType));
-
 
 
 for nf = 1 : nFreq %num freqs
@@ -676,7 +680,7 @@ legend({"Interaction","Both mod.","Freq. mod.","PV","SOM","EXC"},'NumColumns',2)
 % load('modelResults_dataset2_ampDecode_predictionAnalysis.mat'); % 'PCTall','MDLall','predFreqAll','testFreqAll'
 % % dimension IDs: nFreq, nIter, selType, 1, cellType
 
-targSel = 4;
+targSel = 1;
 xSp = [-0.2 0 0.2]; % x-axis plot spacing
 allDiffs = zeros(size(PCTall,1),size(PCTall,2),size(PCTall,3),size(PCTall,5)); % 5 x 200 x 4 x 3
 

@@ -159,9 +159,10 @@ for nc = 1 : nCellTotal % ASSIGN LOGICAL INDEXES
             is.SOM(nc) = true;
     end
 end
+is.trained = Tc.isTrained;
 
-disp('cell identity')
-tabulate(Tc.identity)
+disp('cell identity');
+tabulate(Tc.identity);
 
 
 
