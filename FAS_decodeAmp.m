@@ -25,7 +25,7 @@ useAllNeu = false; % use all available neurons for modeling
 includeErrBar = true; %include error bars in plots
 cellType = ["PV","SOM","EXC"]; % order for plotting
 % cellType = "EXC";
-selType = ["FreqMod","AmpMod","DualMod","InterMod"]; 
+% selType = ["FreqMod","AmpMod","DualMod","InterMod"]; 
 
 % % AMP SEL VS RANDOM DRAWS
 is.allMod = (is.AmpMod | is.DualMod | is.InterMod) & ~is.trained;
@@ -678,7 +678,7 @@ legend({"Interaction","Both mod.","Freq. mod.","PV","SOM","EXC"},'NumColumns',2)
 
 % cd('D:\Tactile_Synchrony\2P-Data\Cleaned\datasets');
 % load('modelResults_dataset2_ampDecode_predictionAnalysis.mat'); % 'PCTall','MDLall','predFreqAll','testFreqAll'
-% % dimension IDs: nFreq, nIter, selType, 1, cellType
+% dimension IDs: nFreq, nIter, selType, 1, cellType
 
 targSel = 1;
 xSp = [-0.2 0 0.2]; % x-axis plot spacing
@@ -697,16 +697,35 @@ for nf = 1 : size(PCTall,1) % loop frequency (5)
         locX = nf + xSp(nc); % x-position
         locY = mean(squeeze(allDiffs(nf,:,targSel,nc)),'omitnan'); % average difference
         locCI = mkCI(squeeze(allDiffs(nf,:,targSel,nc))); % 95 percent condifidence intervals
-        errorbar(locX,locY,locY-locCI(1),'vertical','Color',colors.(cellType(nc)));
+        errorbar(locX,locY,locY-locCI(1),'vertical','Color',colors.(cellType(nc)),'LineWidth',1);
         plot(locX,locY,'.','Color',colors.(cellType(nc)));
     end
 end
-set(gca,'XTick',1:5,'XTickLabels',freqValAll);
+set(gca,'XTick',1:5,'XTickLabels',freqValAll,'XLim',[0.6 5.4]);
 xlabel('Frequency (Hz)','FontName','Arial');
 ylabel({'Average prediction error','(predicted - true)'},'FontName','Arial');
 title('Amplitude decoding bias','FontName','Arial');
 
-
+for nc = 1 : length(cellType)
+    disp(cellType(nc));
+    locYs = squeeze(allDiffs(:,:,targSel,nc)); % average difference values, amp by reps
+    locY_vect = locYs(~isnan(locYs)); % remove NaN and vectorize
+    locXs = repmat((1:5)',1,size(allDiffs,2)); % average difference values, amp by reps
+    locX_vect = locXs(~isnan(locYs)); % remove NaN and vectorize
+    locMdl = fitlm(locX_vect,locY_vect) % linear fit
+    [fitobject,gof,output] = fit(locX_vect,locY_vect,'exp1');
+    xFine = linspace(min(locX_vect),max(locX_vect),100)';
+    % Compare models
+    if locMdl.Rsquared.Adjusted > gof.adjrsquare % linear model better
+        yFit = predict(locMdl,xFine);
+        plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
+    elseif locMdl.Rsquared.Adjusted < gof.adjrsquare % power model better
+        yFit = feval(fitobject, xFine); 
+        yPI = predint(fitobject, xFine, 0.95); % 95% prediction intervals
+        coefBounds = confint(fitobject, 0.95); % coeff. conf. bounds
+        plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
+    end
+end
 
 
 

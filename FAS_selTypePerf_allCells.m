@@ -1149,7 +1149,10 @@ legend('Location', 'best');
 
 % cd('D:\Tactile_Synchrony\2P-Data\Cleaned\datasets');
 % load('modelResults_dataset2_ampDecode_predictionAnalysis.mat'); % 'PCTall','MDLall','predFreqAll','testFreqAll'
-% % dimension IDs: nFreq, nIter, selType, 1, cellType
+% dimension IDs: nFreq, nIter, selType, 1, cellType
+
+% FOR Prediction analysis with all selective types pooled, re-run first
+% section code above with selType as 'allMod'
 
 targSel = 1;
 xSp = [-0.2 0 0.2]; % x-axis plot spacing
@@ -1168,12 +1171,31 @@ for na = 1 : size(PCTall,1) % loop amplitude (5)
         locX = na + xSp(nc); % x-position
         locY = mean(squeeze(allDiffs(na,:,targSel,nc)),'omitnan'); % average difference
         locCI = mkCI(squeeze(allDiffs(na,:,targSel,nc))); % 95 percent condifidence intervals
-        errorbar(locX,locY,locY-locCI(1),'vertical','Color',colors.(cellType(nc)));
-        plot(locX,locY,'.','Color',colors.(cellType(nc)));
+        errorbar(locX,locY,locY-locCI(1),'vertical','Color',colors.(cellType(nc)),'LineWidth',1);
+        plot(locX,locY,'.','Color',colors.(cellType(nc)),'MarkerSize',10);
     end
 end
-set(gca,'XTick',1:5,'XTickLabels',ampValAll);
+set(gca,'XTick',1:5,'XTickLabels',ampValAll,'XLim',[0.6 5.4]);
 xlabel('Amplitude (\mum)','FontName','Arial');
 ylabel({'Average prediction error','(predicted - true)'},'FontName','Arial');
 title('Frequency decoding bias','FontName','Arial');
+
+for nc = 1 : length(cellType)
+    disp(cellType(nc));
+    locYs = squeeze(allDiffs(:,:,targSel,nc)); % average difference values, amp by reps
+    locY_vect = locYs(~isnan(locYs)); % remove NaN and vectorize
+    locXs = repmat((1:5)',1,size(allDiffs,2)); % average difference values, amp by reps
+    locX_vect = locXs(~isnan(locYs)); % remove NaN and vectorize
+    locMdl = fitlm(locX_vect,locY_vect); % linear fit
+    [fitobject,gof,output] = fit(locX_vect,locY_vect,'power2')
+    xFine = linspace(min(locX_vect),max(locX_vect),100)';
+    if locMdl.Rsquared.Adjusted > gof.adjrsquare % linear model better
+        
+    elseif locMdl.Rsquared.Adjusted < gof.adjrsquare % power model better
+        yFit = feval(fitobject, xFine); 
+        yPI = predint(fitobject, xFine, 0.95); % 95% prediction intervals
+        coefBounds = confint(fitobject, 0.95); % coeff. conf. bounds
+        plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
+    end
+end
 

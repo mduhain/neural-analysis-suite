@@ -45,8 +45,8 @@ end
 
 accMat = zeros(2,length(cellType)); % col.1 (acc mean, acc CI), col.2 (PV, SOM, EXC), Freq.Sel. Neurons
 accMatAA = zeros(2,length(cellType)); % col.1 (acc mean, acc CI), col.2 (PV, SOM, EXC), All-Avail. Neurons
-allAcc = cell(2,length(cellType));
-allAccAA = cell(2,length(cellType));
+allAcc = cell(length(cellType),1);
+allAccAA = cell(length(cellType),1);
 
 figure('Color',[1 1 1]);
 % tiledlayout(1,3);
@@ -131,9 +131,11 @@ for np = 1 : length(locMeanCorr1)
 end
 % SAVE AVERAGE ACCURACIES
 accMat(1,3) = mean(PCTloc1,'omitnan');
+allAcc{3} = PCTloc1;
 locCI = mkCI(PCTloc1);
 accMat(2,3) = accMat(1,3) - locCI(1);
 accMatAA(1,3) = mean(PCTloc1AA,'omitnan');
+allAccAA{3} = PCTloc1AA;
 locCI = mkCI(PCTloc1AA);
 accMatAA(2,3) = accMatAA(1,3) - locCI(1);
 % FIT ALL POINTS
@@ -274,9 +276,11 @@ for npt = 2 : 3 % num pair types (EXC:EXC, EXC:PV, EXC:SOM, PV:PV, SOM:SOM)
     PCTlocAA(isnan(locMeanCorr1)) = NaN;
     % SAVE AVERAGE ACCURACIES
     accMat(1,npt-1) = mean(PCTloc,'omitnan'); % FREQ.SEL.NEURONS
+    allAcc{npt-1} = PCTloc;
     locCI = mkCI(PCTloc);
     accMat(2,npt-1) = accMat(1,npt-1) - locCI(1);
     accMatAA(1,npt-1) = mean(PCTlocAA,'omitnan'); % ALL.AVAIL.NEURONS
+    allAccAA{npt-1} = PCTlocAA;
     locCI = mkCI(PCTlocAA);
     accMatAA(2,npt-1) = accMatAA(1,npt-1) - locCI(1);
     % nexttile; hold on;
@@ -353,15 +357,51 @@ title("Average within-session decoding accuracy",'FontName','Arial');
 
 % ALL AVAILABLE UNITS
 figure('Color',[1 1 1]); hold on;
-for nc = 1 : length(cellType)
-    bar(nc,accMatAA(1,nc),'FaceColor',colors.(cellType(nc)));
-    errorbar(nc,accMatAA(1,nc),accMatAA(2,nc),'vertical','Color',[0 0 0]);
+% PV+EXC BAR
+yVals1 = allAccAA{1}(~isnan(allAccAA{1}));
+yMean = mean(yVals1);
+yCI = mkCI(yVals1);
+bar(1,yMean,'FaceColor',colors.PV);
+errorbar(1,yMean,yMean-yCI(1),'vertical','Color',[0 0 0]);
+% EXC-ALONE BAR (NO PV)
+yVals2 = allAccAA{3}(~isnan(allAccAA{1}));
+yMean = mean(yVals2,'omitnan');
+yCI = mkCI(yVals2);
+bar(2,yMean,'FaceColor',colors.EXC);
+errorbar(2,yMean,yMean-yCI(1),'vertical','Color',[0 0 0]);
+% 2-sided Kolmogorov-Smirnov test [PV+EXC : EXC-alone]
+[h,p,ks2stat] = kstest2(yVals1,yVals2);
+disp(p)
+if p < 0.05
+    plot([1 2],[53 53],'k-');
+    text(1.5,53,'*','HorizontalAlignment','center','VerticalAlignment','bottom',...
+        'FontName','Arial','FontSize',12);
 end
 
-% 2-sided Kolmogorov-Smirnov test [PV+EXC : SOM+EXC]
-[h,p,ks2stat] = kstest2(
+% SOM+EXC BAR
+yVals3 = allAccAA{2}(~isnan(allAccAA{2}));
+yMean = mean(yVals3);
+yCI = mkCI(yVals3);
+bar(3,yMean,'FaceColor',colors.SOM);
+errorbar(3,yMean,yMean-yCI(1),'vertical','Color',[0 0 0]);
+% EXC-ALONE BAR (NO SOM)
+yVals4 = allAccAA{3}(~isnan(allAccAA{2}));
+yMean = mean(yVals4,'omitnan');
+yCI = mkCI(yVals4);
+bar(4,yMean,'FaceColor',colors.EXC);
+errorbar(4,yMean,yMean-yCI(1),'vertical','Color',[0 0 0]);
+% 2-sided Kolmogorov-Smirnov test [PV+EXC : EXC-alone]
+[h,p,ks2stat] = kstest2(yVals3,yVals4);
+disp(p)
+if p < 0.05
+    plot([3 4],[53 53],'k-');
+    text(3.5,53,'*','HorizontalAlignment','center','VerticalAlignment','bottom',...
+        'FontName','Arial','FontSize',12);
+end
 
-set(gca,'XLim',[0.2 3.8],'XTick',1:3,'YLim',[20 50],'XTickLabel',{'PV+EXC','SOM+EXC','EXC alone'});
+
+set(gca,'XLim',[0.2 4.8],'XTick',1:4,'YLim',[32.5 57.5],'XTickLabel',{'PV+EXC','EXC alone','SOM+EXC','EXC alone'},...
+    'XTickLabelRotation',-20);
 ylabel('Mean frequency decoding accuracy %','FontName','Arial');
 xlabel('Neuron source(s)','FontName','Arial');
 title("Average within-session decoding accuracy",'FontName','Arial');
