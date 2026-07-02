@@ -12,7 +12,7 @@ end
 
 % Calculate mean and standard error
 mean_data = mean(Data,'omitnan');
-std_error = std(Data,'omitnan') / sqrt(length(Data));
+std_error = std(Data,'omitnan') / sqrt(sum(~isnan(Data)));
 
 % Calculate the critical value from the t-distribution
 t_critical = tinv(1 - alpha/2, length(Data) - 1);
