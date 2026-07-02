@@ -45,8 +45,8 @@ d1AmpVals = zscore(ampValsOg);
 %% DECLARE ACTIVE DATASET
 
 % USER INPUTS (CHANGE THESE)
-Tc = T2; % <---- % T1 (Dataset1), T2 (dataset2)
-minTrialNum = 15; % 25 (Dataset1) | 15 (Dataset2)
+Tc = T1; % <---- % T1 (Dataset1), T2 (dataset2)
+minTrialNum = 25; % 25 (Dataset1) | 15 (Dataset2)
 
 clear T1 T2 % remove others from memory to save RAM
 % cellType = unique(Tc.identity);
@@ -307,7 +307,26 @@ elseif multiAmp == false
 end
 
 fprintf(newline);
-disp('Selectivity & ANOVAs calculated');
+disp('Selectivity & ANOVAs calculated'); fprintf('\n');
+
+
+if multiAmp == 0
+for nm = 1 : size(is.mouseNum,2)
+    disp(mouseNums(nm));
+    nPV = sum(is.mouseNum(:,nm) & is.PV);
+    nSelPV = sum(is.mouseNum(:,nm) & is.PV & is.selective);
+    disp(strcat(num2str(nPV)," PV, ",num2str(nSelPV)," sel. PV"));
+    nSOM = sum(is.mouseNum(:,nm) & is.SOM);
+    nSelSOM = sum(is.mouseNum(:,nm) & is.SOM & is.selective);
+    disp(strcat(num2str(nSOM)," SOM, ",num2str(nSelSOM)," sel. SOM"));
+    nEXC = sum(is.mouseNum(:,nm) & is.EXC);
+    nSelEXC = sum(is.mouseNum(:,nm) & is.EXC & is.selective);
+    disp(strcat(num2str(nEXC)," EXC, ",num2str(nSelEXC)," sel. EXC"));
+    if nm ~= size(is.mouseNum,2)
+        disp('------------------------');
+    end
+end
+end
 
 
  %% LOAD TO HERE
@@ -423,7 +442,7 @@ for i = 1:length(cellType)
         'center','VerticalAlignment','bottom','FontName','Arial','FontSize',9)
     errorbar(i,respPerc(i)*100,respCI*100,Color=[0,0,0],LineWidth=1.4);
 end
-set(gca,'XTick',[1 2 3],'XTickLabels',cellType,'ylim',[60 100],'FontName','Arial','Box','off');
+set(gca,'XTick',[1 2 3],'XTickLabels',cellType,'ylim',[70 100],'FontName','Arial','Box','off');
 title('Neurons with stimulus response','FontName','Arial');
 ylabel('Percentage of neurons per group','FontName','Arial');
 

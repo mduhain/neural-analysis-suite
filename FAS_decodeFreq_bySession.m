@@ -14,7 +14,7 @@ neuStepSize = 15; % Num neurons to add to model each step
 gammaSteps = 0; % Gamma value(s) for LDA
 deltaSteps = 0; % Delta values(s) for LDA; [0, 0.00001, 0.0001, 0.001, 0.01, 0.1, 1];
 targetAmp = 5; % Amplitude value to decode with; [0.33 0.76 1.6 3.5 7.7] um
-onlyEXC = true; % Decoding with only EXC neurons in sessions
+onlyEXC = false; % Decoding with only EXC neurons in sessions
 lateRespWin = false; % Decoding using the later response window (3-4 sec post-stim)
 onlyFreqSel = false; % Decoding with only frequency-selective units
 
@@ -88,6 +88,10 @@ for ns = 1:length(sessIDs) %nt = 1 : length(selType)
             disp('No EXC neurons this sess.')
             continue
         end
+    elseif length(locEXCs) <= locNumINH
+        numNeuSess = locNumINH;
+    else
+        error('un-expected condition met');
     end
 
     if usePCA == true && numNeuSess < kComp
@@ -333,7 +337,42 @@ end
 
 
 
+%% Dataset 1: Within-Session Decoding, frequency-selective vs. all-available
 
+load('PCT_dataset1_withinSess_freqSelVsAllAvail.mat'); % 'PCT_FS' & 'PCT_AA'
+PCT_FS = PCT_FS(:,1) * 100;
+PCT_AA = PCT_AA(:,1) * 100;
+
+idx = (PCT_FS(:) ~= 0) & (PCT_AA(:) ~= 0);
+
+% TWO BAR PLOTS, FS vs AA
+figure('Color',[1 1 1]); hold on;
+
+bar(1,mean(PCT_FS(idx)),'FaceColor',[0.75 0.75 0.75]);
+locCIfs = mkCI(PCT_FS(idx));
+errorbar(1,mean(PCT_FS(idx)),mean(PCT_FS(idx))-locCIfs(1),'Color',[0 0 0]);
+%swarmchart(ones(length(PCT_FS(idx)),1),PCT_FS(idx),'filled','o','MarkerFaceColor',[0 0 0],'SizeData',4);
+
+bar(2,mean(PCT_AA(idx)),'FaceColor',[0.9 0.9 0.9]);
+locCIaa = mkCI(PCT_AA(idx));
+errorbar(2,mean(PCT_AA(idx)),mean(PCT_AA(idx))-locCIaa(1),'Color',[0 0 0]);
+%swarmchart(ones(length(PCT_AA(idx)),1)+1,PCT_AA(idx),'filled','o','MarkerFaceColor',[0 0 0],'SizeData',4);
+
+set(gca,'XTick',[],'XLim',[0.2 2.8],'YLim',[35 60]);
+ylabel('Frequency decoding accuracy (%)','FontName','Arial');
+title("Model performance within sessions",'FontName','Arial');
+
+% 2-sided Kolmogorov-Smirnov test
+[h,p,ks2stat] = kstest2(PCT_FS(idx),PCT_AA(idx));
+yv = max([locCIfs; locCIaa]) + 2; % y-value for figure annotation
+if p < 0.05
+    plot([1 2],[yv yv],'k-');
+    text(1.5,yv,'*','FontName','Arial','HorizontalAlignment','center','VerticalAlignment','bottom');
+else
+    plot([1 2],[yv yv],'k-');
+    text(1.5,yv,'n.s.','FontName','Arial','HorizontalAlignment','center','VerticalAlignment','bottom');
+end
+legend({'Frequency-Selective','','All Available',''},'Box','off');
 
 
 %% PLOTTING

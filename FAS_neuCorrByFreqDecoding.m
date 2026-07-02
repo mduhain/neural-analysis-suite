@@ -45,6 +45,8 @@ end
 
 accMat = zeros(2,length(cellType)); % col.1 (acc mean, acc CI), col.2 (PV, SOM, EXC), Freq.Sel. Neurons
 accMatAA = zeros(2,length(cellType)); % col.1 (acc mean, acc CI), col.2 (PV, SOM, EXC), All-Avail. Neurons
+allAcc = cell(2,length(cellType));
+allAccAA = cell(2,length(cellType));
 
 figure('Color',[1 1 1]);
 % tiledlayout(1,3);
@@ -336,20 +338,32 @@ for npt = 2 : 3 % num pair types (EXC:EXC, EXC:PV, EXC:SOM, PV:PV, SOM:SOM)
 
 end
 
-% Additional plot: average accuracy across 3 conditions (EXC:EXC, EXC:PV, EXC:SOM)
+% Additional plost: average accuracy across 3 conditions (EXC:EXC, EXC:PV, EXC:SOM)
+% FREQUENCY-SELECTIVE UNITS ONLY
 figure('Color',[1 1 1]); hold on;
 for nc = 1 : length(cellType)
     bar(nc,accMat(1,nc),'FaceColor',colors.(cellType(nc)));
     errorbar(nc,accMat(1,nc),accMat(2,nc),'vertical','Color',[0 0 0]);
 end
-for nc = 1 : length(cellType)
-    bar(nc+4,accMatAA(1,nc),'FaceColor',colors.(cellType(nc)));
-    errorbar(nc+4,accMatAA(1,nc),accMatAA(2,nc),'vertical','Color',[0 0 0]);
-end
-set(gca,'XLim',[0.2 7.8],'XTick',[2 6],'XTickLabel',{'Frequency selective','all available'});
+set(gca,'XLim',[0.2 3.8],'XTick',[2 6],'XTickLabel',{'Frequency selective','all available'});
 ylabel('Mean frequency decoding accuracy %','FontName','Arial');
 xlabel('Neuron source(s)','FontName','Arial');
 legend({'PV+EXC','','SOM+EXC','','EXC alone',''},'Box','off');
+title("Average within-session decoding accuracy",'FontName','Arial');
+
+% ALL AVAILABLE UNITS
+figure('Color',[1 1 1]); hold on;
+for nc = 1 : length(cellType)
+    bar(nc,accMatAA(1,nc),'FaceColor',colors.(cellType(nc)));
+    errorbar(nc,accMatAA(1,nc),accMatAA(2,nc),'vertical','Color',[0 0 0]);
+end
+
+% 2-sided Kolmogorov-Smirnov test [PV+EXC : SOM+EXC]
+[h,p,ks2stat] = kstest2(
+
+set(gca,'XLim',[0.2 3.8],'XTick',1:3,'YLim',[20 50],'XTickLabel',{'PV+EXC','SOM+EXC','EXC alone'});
+ylabel('Mean frequency decoding accuracy %','FontName','Arial');
+xlabel('Neuron source(s)','FontName','Arial');
 title("Average within-session decoding accuracy",'FontName','Arial');
 
 
