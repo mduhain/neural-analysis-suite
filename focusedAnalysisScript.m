@@ -472,40 +472,89 @@ ylabel('Percentage of responsive neurons','FontName','Arial');
 %% VENN DIAGRAM PER CELL
 
 nc = 3;
+nAll = sum(is.(cellType(nc)) & ~is.trained); % all neurons
 
-nF = sum(is.(cellType(nc)) & Tc.anovanFreqP<0.05);
-nA = sum(is.(cellType(nc)) & Tc.anovanAmpP<0.05);
-nI = sum(is.(cellType(nc)) & Tc.anovanMixP<0.05);
+nF = sum(is.(cellType(nc)) & ~is.trained & Tc.anovanFreqP<0.05); % all neurons with F condition
+nA = sum(is.(cellType(nc)) & ~is.trained & Tc.anovanAmpP<0.05); % all neurons with A condition
+nI = sum(is.(cellType(nc)) & ~is.trained & Tc.anovanMixP<0.05); % all neurons with F*A condition (Interaction)
 
-nFA = sum(is.(cellType(nc)) & Tc.anovanFreqP<0.05 & Tc.anovanAmpP<0.05 & Tc.anovanMixP>0.05);
-nFI = sum(is.(cellType(nc)) & Tc.anovanFreqP<0.05 & Tc.anovanAmpP>0.05 & Tc.anovanMixP<0.05);
-nAI = sum(is.(cellType(nc)) & Tc.anovanFreqP>0.05 & Tc.anovanAmpP<0.05 & Tc.anovanMixP<0.05);
-nFAI = sum(is.(cellType(nc)) & Tc.anovanFreqP<0.05 & Tc.anovanAmpP<0.05 & Tc.anovanMixP<0.05);
+nFA = sum(is.(cellType(nc)) & ~is.trained & Tc.anovanFreqP<0.05 & Tc.anovanAmpP<0.05 & Tc.anovanMixP>0.05); % F+A
+nFI = sum(is.(cellType(nc)) & ~is.trained & Tc.anovanFreqP<0.05 & Tc.anovanAmpP>0.05 & Tc.anovanMixP<0.05); % F and F*A
+nAI = sum(is.(cellType(nc)) & ~is.trained & Tc.anovanFreqP>0.05 & Tc.anovanAmpP<0.05 & Tc.anovanMixP<0.05); % A and F*A
+nXI = sum(is.(cellType(nc)) & ~is.trained & Tc.anovanFreqP<0.05 & Tc.anovanAmpP<0.05 & Tc.anovanMixP<0.05); % F+A and F*A
 
-nFo = nF - nFA - nFI - nFAI;
-nAo = nA - nFA - nAI - nFAI;
-nIo = nI - nFI - nAI - nFAI;
+nFo = nF - nFA - nFI - nXI; % F only
+nAo = nA - nFA - nAI - nXI; % A only
+nIo = nI - nFI - nAI - nXI; % F*A only
 
 % A = [nF nA nI] % F, A, F*A
 % I = [nFA nFI nAI nFAI] % interactions
-A = [40 40 30];
-I = [20 5 5 15];
+A = [40 40 30]; % hard-coded for nice visuals
+I = [20 5 5 15]; % hard coded for nice visuals
 
 figure('theme','light','color',[1 1 1],'Position',[100 100 550 500]);
 venn(A,I,'FaceAlpha',0.5,'FaceColor',colors.(cellType(nc)));
 set(gca,'XColor',[1 1 1],'YColor',[1 1 1]);
 
-annotation("textbox", [0.4503 0.343 0.07063 0.05], "String", num2str(nFA), "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none")
-annotation("textbox", [0.2593 0.203 0.06599 0.054], "String", "F", "FontName", "Arial", "FontSize", 12, "FontWeight", "bold", "HorizontalAlignment", "center", "LineStyle", "none")
-annotation("textbox", [0.2356 0.381 0.05762 0.05], "String", num2str(nFo), "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none")
-annotation("textbox", [0.6761 0.361 0.05762 0.05], "String", num2str(nAo), "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none")
-annotation("textbox", [0.4359 0.641 0.09944 0.054], "String", "F*A", "FontName", "Arial", "FontSize", 12, "FontWeight", "bold", "HorizontalAlignment", "center", "LineStyle", "none")
-annotation("textbox", [0.6506 0.199 0.07156 0.054], "String", "A", "FontName", "Arial", "FontSize", 12, "FontWeight", "bold", "HorizontalAlignment", "center", "LineStyle", "none")
-annotation("textbox", [0.4303 0.211 0.1069 0.054], "String", "F+A", "FontName", "Arial", "FontSize", 12, "FontWeight", "bold", "HorizontalAlignment", "center", "LineStyle", "none")
-annotation("textbox", [0.441 0.517 0.0855 0.05], "String", num2str(nFAI), "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none")
-annotation("textbox", [0.4531 0.723 0.05762 0.05], "String", num2str(nIo), "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none")
-annotation("textbox", [0.5488 0.555 0.07063 0.05], "String", num2str(nAI), "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none")
-annotation("textbox", [0.3388 0.555 0.07063 0.05], "String", num2str(nFI), "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none")
+% LABELS
+annotation("textbox", [0.2593 0.203 0.06599 0.054], "String", "F", "FontName", "Arial",...
+    "FontSize", 12, "FontWeight", "bold", "HorizontalAlignment", "center", "LineStyle", "none");
+annotation("textbox", [0.4303 0.211 0.1069 0.054], "String", "F+A", "FontName", "Arial",...
+    "FontSize", 12, "FontWeight", "bold", "HorizontalAlignment", "center", "LineStyle", "none");
+annotation("textbox", [0.6506 0.199 0.07156 0.054], "String", "A", "FontName", "Arial",...
+    "FontSize", 12, "FontWeight", "bold", "HorizontalAlignment", "center", "LineStyle", "none");
+annotation("textbox", [0.4359 0.821 0.09944 0.054], "String", "F*A", "FontName", "Arial",...
+    "FontSize", 12, "FontWeight", "bold", "HorizontalAlignment", "center", "LineStyle", "none");
+
+% % RAW NUMBERS
+% annotation("textbox", [0.2356 0.381 0.05762 0.05], "String", num2str(nFo),...
+%     "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+% annotation("textbox", [0.4503 0.343 0.07063 0.05], "String", num2str(nFA),...
+%     "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+% annotation("textbox", [0.6761 0.361 0.05762 0.05], "String", num2str(nAo),...
+%     "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+% annotation("textbox", [0.4531 0.723 0.05762 0.05], "String", num2str(nIo),...
+%     "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+% annotation("textbox", [0.3388 0.555 0.07063 0.05], "String", num2str(nFI),...
+%     "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+% annotation("textbox", [0.4410 0.517 0.08550 0.05], "String", num2str(nXI),...
+%     "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+% annotation("textbox", [0.5488 0.555 0.07063 0.05], "String", num2str(nAI),...
+%     "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+
+% % PERCENTAGE VALUES
+% annotation("textbox", [0.2356 0.381 0.05762 0.05], "String", strcat(num2str(100*nFo/nAll,3),"%"),...
+%     "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+% annotation("textbox", [0.4503 0.343 0.07063 0.05], "String", strcat(num2str(100*nFA/nAll,3),"%"),...
+%     "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+% annotation("textbox", [0.6761 0.361 0.05762 0.05], "String", strcat(num2str(100*nAo/nAll,3),"%"),...
+%     "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+% annotation("textbox", [0.4531 0.723 0.05762 0.05], "String", strcat(num2str(100*nIo/nAll,3),"%"),...
+%     "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+% annotation("textbox", [0.3488 0.555 0.07063 0.05], "String", strcat(num2str(100*nFI/nAll,3),"%"),...
+%     "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+% annotation("textbox", [0.4410 0.517 0.08550 0.05], "String", strcat(num2str(100*nXI/nAll,3),"%") ,...
+%     "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+% annotation("textbox", [0.5488 0.555 0.07063 0.05], "String", strcat(num2str(100*nAI/nAll,3),"%"),...
+%     "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+
+
+% PERCENTAGE AND RAW VALUE
+annotation("textbox", [0.2356 0.381 0.05762 0.05], "String", strcat("n=",num2str(nFo)," ",num2str(100*nFo/nAll,3),"%"),...
+    "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+annotation("textbox", [0.4503 0.343 0.07063 0.05], "String", strcat("n=",num2str(nFA)," ",num2str(100*nFA/nAll,3),"%"),...
+    "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+annotation("textbox", [0.6761 0.361 0.05762 0.05], "String", strcat("n=",num2str(nAo)," ",num2str(100*nAo/nAll,3),"%"),...
+    "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+annotation("textbox", [0.4531 0.723 0.05762 0.05], "String", strcat("n=",num2str(nIo)," ",num2str(100*nIo/nAll,3),"%"),...
+    "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+annotation("textbox", [0.3488 0.575 0.07063 0.05], "String", strcat("n=",num2str(nFI)," ",num2str(100*nFI/nAll,3),"%"),...
+    "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+annotation("textbox", [0.4410 0.537 0.08550 0.05], "String", strcat("n=",num2str(nXI)," ",num2str(100*nXI/nAll,3),"%") ,...
+    "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+annotation("textbox", [0.5488 0.575 0.07063 0.05], "String", strcat("n=",num2str(nAI)," ",num2str(100*nAI/nAll,3),"%"),...
+    "FontName", "Arial", "HorizontalAlignment", "center", "LineStyle", "none");
+
 hTextboxshape = findall(gcf,"Type","textboxshape");
 
 
