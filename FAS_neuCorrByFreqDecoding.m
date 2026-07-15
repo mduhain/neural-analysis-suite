@@ -19,23 +19,27 @@ allCorrValsLate = allCorrVals;
 allPairNumsLate = allPairNums;
 
 %% FOR DATASET 2
-cd('C:\Users\skich\Desktop\WORK');
-load('PCT_workspace_20260610.mat'); % PCTall_baseline, PCTall_late, PCTallExc_baseline, & PCTallExc_late
-
-load('dataset2_neuCorrValsPerSess_lateRespWindows.mat'); % allCorrVals & allPairNums
-allCorrValsLate = allCorrVals;
-allPairNumsLate = allPairNums;
-
-load('dataset2_neuCorrValsPerSess.mat'); % allCorrVals & allPairNums
-allCorrValsBase = allCorrVals;
-allPairNumsBase = allPairNums;
-
-clear allCorrVals allPairNums 
+% cd('C:\Users\skich\Desktop\WORK');
+% load('PCT_workspace_20260610.mat'); % PCTall_baseline, PCTall_late, PCTallExc_baseline, & PCTallExc_late
+% 
+% load('dataset2_neuCorrValsPerSess_lateRespWindows.mat'); % allCorrVals & allPairNums
+% allCorrValsLate = allCorrVals;
+% allPairNumsLate = allPairNums;
+% 
+% load('dataset2_neuCorrValsPerSess.mat'); % allCorrVals & allPairNums
+% allCorrValsBase = allCorrVals;
+% allPairNumsBase = allPairNums;
+% 
+% clear allCorrVals allPairNums 
 
 
 %% 
-% Filter out trained sessions
 
+% User Inputs
+corrThreshDataset1 = 1; % within-sess threshold for extremely high corr values
+corrThreshDataset2 = 0.3; % within-sess threshold for extremely high corr values
+
+% FILTER OUT TRAINED SESSIONS
 pairNames = {"EXC:EXC", "EXC:PV", "EXC:SOM", "PV:PV", "SOM:SOM"};
 trainedSess = false(size(is.sessID,2),1);
 for ns = 1 : size(is.sessID,2)
@@ -48,18 +52,13 @@ accMatAA = zeros(2,length(cellType)); % col.1 (acc mean, acc CI), col.2 (PV, SOM
 allAcc = cell(length(cellType),1);
 allAccAA = cell(length(cellType),1);
 
-figure('Color',[1 1 1]);
-% tiledlayout(1,3);
-% nexttile(1); 
-hold on
-
-% EXC:EXC (baseline) (0-1sec post-stim) 
+% EXC:EXC BASELINE WINDOW: (0-1sec post-stim) 
 PCTloc = squeeze(mean(PCTallEXC_baseline(:,~trainedSess,1),1))' .* 100; % frequency selective neurons
 PCTloc(PCTloc == 0) = NaN;
 PCTlocAA = squeeze(mean(PCTallEXC_baseline_allAvail(:,~trainedSess,1),1))' .* 100; %all-available neurons
 PCTlocAA(PCTlocAA == 0) = NaN;
 
-% split pairwise correlations up by cell type (PV|SOM|EXC)
+% SPLIT PAIRWISE CORRELATIONS UP BY SESSION & CELL TYPE (PV|SOM|EXC)
 allPairTypes = cell(size(allCorrValsBase));
 for ns = 1 : size(allPairNumsBase,1)
     allPairTypes{ns} = zeros(length(allPairNumsBase{ns}),1);
@@ -79,16 +78,16 @@ for ns = 1 : size(allPairNumsBase,1)
     end
 end
 
-% plotting
-npt = 1;
+% PREPARE EXC:EXC PAIR CORRELATIONS / CELL NUMBERS
+npt = 1; % EXC:EXC pairs only
 locPairVals = NaN(size(allPairNumsBase,1),1);
 locMeanCorr1 = NaN(size(allPairNumsBase,1),1);
 locInhType = zeros(size(allPairNumsBase,1),1);
 for ns = 1 : size(allPairNumsBase,1) % loop sessions
     if multiAmp == true
-        locIdx = all(is.allMod(allPairNumsBase{ns}),2); % neuron pairs where both are selective
+        locIdx = all(is.allMod(allPairNumsBase{ns}),2); % neuron pairs within-sess where both are selective
     elseif multiAmp == false
-        locIdx = all(is.selective(allPairNumsBase{ns}),2); % neuron pairs where both are selective
+        locIdx = all(is.selective(allPairNumsBase{ns}),2); % neuron pairs within-sess where both are selective
     end
     locVals = allCorrValsBase{ns}(allPairTypes{ns} == npt & locIdx);
     locPairVals(ns) = mean(locVals);
@@ -99,17 +98,22 @@ for ns = 1 : size(allPairNumsBase,1) % loop sessions
         locInhType(ns) = 2;
     end
 end
-locMeanCorr1 = locMeanCorr1(~trainedSess);
+locMeanCorr1 = locMeanCorr1(~trainedSess); % remove trained sessions
 
+% APPLY THRESHOLDS TO REMOVE SESSION WITH HIGH NEURON CORRELATIONS 
+% (per MGR suggestion)
 if multiAmp == true
-    abvThresh = locMeanCorr1 > 0.3;
+    abvThresh = locMeanCorr1 > corrThreshDataset2;
 elseif multiAmp == false
-    abvThresh = locMeanCorr1 > 1;
+    abvThresh = locMeanCorr1 > corrThreshDataset1;
 end
-
 locMeanCorr1(abvThresh) = [];
 PCTloc1 = PCTloc(~abvThresh);
 PCTloc1AA = PCTlocAA(~abvThresh);
+
+% PLOTTING (EXC:EXC AT BASELINE)
+figure('Color',[1 1 1]);
+hold on
 locInhType(abvThresh) = [];
 locCorrPV = []; locAccPV = [];
 locCorrSOM = []; locAccSOM = [];
@@ -129,6 +133,7 @@ for np = 1 : length(locMeanCorr1)
         plot(locMeanCorr1(np),PCTloc1(np),'.','Color',[0.7 0 0]); 
     end
 end
+
 % SAVE AVERAGE ACCURACIES
 accMat(1,3) = mean(PCTloc1,'omitnan');
 allAcc{3} = PCTloc1;
@@ -138,13 +143,12 @@ accMatAA(1,3) = mean(PCTloc1AA,'omitnan');
 allAccAA{3} = PCTloc1AA;
 locCI = mkCI(PCTloc1AA);
 accMatAA(2,3) = accMatAA(1,3) - locCI(1);
+
 % FIT ALL POINTS
 mdl = fitlm(locMeanCorr1,PCTloc1);
 xGrid = linspace(min(locMeanCorr1(~isnan(PCTloc1))), max(locMeanCorr1(~isnan(PCTloc1))), 100)'; 
 [y,ci] = predict(mdl,xGrid);
 plot(xGrid, y, 'r-', xGrid, ci(:,1), 'r:', xGrid, ci(:,2), 'r:', 'LineWidth', 1);
-% text(-.04,62.5,strcat("p-val = ",num2str(mdl.ModelFitVsNullModel.Pvalue,3)),'FontName','Arial','Color',[1 0 0]);
-% text(-.04,60,strcat("r-sq. = ",num2str(mdl.Rsquared.Ordinary,3)),'FontName','Arial','Color',[1 0 0]);
 disp("EXC:EXC base window fit");
 disp(strcat("p-val = ",num2str(mdl.ModelFitVsNullModel.Pvalue,3)));
 disp(strcat("r-sq. = ",num2str(mdl.Rsquared.Ordinary,3)));
@@ -152,7 +156,7 @@ disp(strcat("slope = ",num2str(mdl.Coefficients.Estimate(2),3)));
 
 
 
-% EXC:EXC (late window) (3-4sec post-stim) 
+% EXC:EXC LATE WINDOW: (3-4sec post-stim) 
 PCTloc = squeeze(mean(PCTallEXC_late(:,~trainedSess,1),1))' .* 100;
 PCTloc(PCTloc == 0) = NaN;
 
@@ -176,7 +180,7 @@ for ns = 1 : size(allPairNumsLate,1)
     end
 end
 
-% plotting
+% EXTRACT CORRELATION VALUES FROM WITHIN SESSION FREQUENCY-SELECTIVE PAIRS 
 npt = 1;
 locPairVals = NaN(size(allPairNumsLate,1),1);
 locMeanCorr2 = NaN(size(allPairNumsLate,1),1);
@@ -198,15 +202,17 @@ for ns = 1 : size(allPairNumsLate,1) % loop sessions
 end
 locMeanCorr2 = locMeanCorr2(~trainedSess);
 
+% APPLY THRESHOLD TO WINTIN-SESSION AVG NEURON CORRELATION VALUES
 if multiAmp == true
     abvThresh = locMeanCorr2 > 0.3;
 elseif multiAmp == false
     abvThresh = locMeanCorr2 > 1;
 end
-
 locMeanCorr2(abvThresh) = [];
 PCTloc2 = PCTloc(~abvThresh);
 locInhType(abvThresh) = [];
+
+% PLOTTING
 locCorrPV = []; locAccPV = [];
 locCorrSOM = []; locAccSOM = [];
 for np = 1 : length(locMeanCorr2)
@@ -225,25 +231,24 @@ for np = 1 : length(locMeanCorr2)
         plot(locMeanCorr2(np),PCTloc2(np),'.','Color',[0 0 0.7]); 
     end
 end
+
 % FIT ALL POINTS
 mdl = fitlm(locMeanCorr2,PCTloc2);
 xGrid = linspace(min(locMeanCorr2(~isnan(PCTloc2))), max(locMeanCorr2(~isnan(PCTloc2))), 100)'; 
 [y,ci] = predict(mdl,xGrid);
 plot(xGrid, y, 'b-', xGrid, ci(:,1), 'b:', xGrid, ci(:,2), 'b:', 'LineWidth', 1);
-% text(-.04,57.5,strcat("p-val = ",num2str(mdl.ModelFitVsNullModel.Pvalue,3)),'FontName','Arial','Color',[0 0 1]);
-% text(-.04,55,strcat("r-sq. = ",num2str(mdl.Rsquared.Ordinary,3)),'FontName','Arial','Color',[0 0 1]);
 disp(strcat("EXC:EXC late window fit p-val = ",num2str(mdl.ModelFitVsNullModel.Pvalue,3)));
 disp(strcat("EXC:EXC late window fit r-sq. = ",num2str(mdl.Rsquared.Ordinary,3)));
 disp(strcat("slope = ",num2str(mdl.Coefficients.Estimate(2),3)));
 
-% FINAL ADJUSTMENTS
+% FINAL FIGURE ADJUSTMENTS
 ylabel('Frequency decoding accuracy %','FontName','Arial');
 xlabel('Mean neuron corr value','FontName','Arial');
 title({"Neuron correlation by frequency decoding accuracy",pairNames{npt}},'FontName','Arial');
 set(gca,'XLim',[.1 .8],'YLim',[10 80]);
 hold off;
 
-% additional sub-plot
+% ADDITIONAL SUB PLOT OF CORRELATION SCATTER
 figure('Color',[1 1 1]);
 plot(locMeanCorr1,locMeanCorr2,'k.');
 set(gca,'XLim',[0 .8],'YLim',[0 .8],'box','off');
@@ -253,11 +258,13 @@ set(gca,'XLim',[0 .8],'YLim',[0 .8],'box','off');
 % EXC:PV and EXC:SOM
 for npt = 2 : 3 % num pair types (EXC:EXC, EXC:PV, EXC:SOM, PV:PV, SOM:SOM)
     figure('Color',[1 1 1]); hold on;
+    
     % BASELINE WINDOW (0-1 sec post-stim)
     PCTloc = squeeze(mean(PCTall_baseline(:,~trainedSess,1),1))' .* 100;
     PCTloc(PCTloc == 0) = NaN;
     PCTlocAA = squeeze(mean(PCTall_baseline_allAvail(:,~trainedSess,1),1))' .* 100;
     PCTlocAA(PCTlocAA == 0) = NaN;
+
     % PREALLOCATE
     locPairVals = NaN(size(allPairNumsBase,1),1);
     locMeanCorr1 = NaN(size(allPairNumsBase,1),1);
@@ -274,7 +281,8 @@ for npt = 2 : 3 % num pair types (EXC:EXC, EXC:PV, EXC:SOM, PV:PV, SOM:SOM)
     locMeanCorr1 = locMeanCorr1(~trainedSess);
     PCTloc(isnan(locMeanCorr1)) = NaN;
     PCTlocAA(isnan(locMeanCorr1)) = NaN;
-    % SAVE AVERAGE ACCURACIES
+
+    % SAVE OUT AVERAGE ACCURACIES
     accMat(1,npt-1) = mean(PCTloc,'omitnan'); % FREQ.SEL.NEURONS
     allAcc{npt-1} = PCTloc;
     locCI = mkCI(PCTloc);
@@ -283,15 +291,13 @@ for npt = 2 : 3 % num pair types (EXC:EXC, EXC:PV, EXC:SOM, PV:PV, SOM:SOM)
     allAccAA{npt-1} = PCTlocAA;
     locCI = mkCI(PCTlocAA);
     accMatAA(2,npt-1) = accMatAA(1,npt-1) - locCI(1);
-    % nexttile; hold on;
     plot(locMeanCorr1,PCTloc,'.','Color',[0.7 0 0]);
-    % linear model fit
+
+    % LINEAR MODEL FIT
     mdl = fitlm(locMeanCorr1,PCTloc);
     xGrid = linspace(min(locMeanCorr1(~isnan(PCTloc1))), max(locMeanCorr1(~isnan(PCTloc1))), 100)'; 
     [y,ci] = predict(mdl,xGrid);
     plot(xGrid, y, 'r-', xGrid, ci(:,1), 'r:', xGrid, ci(:,2), 'r:', 'LineWidth', 1);
-    % text(-.04,62.5,strcat("p-val = ",num2str(mdl.ModelFitVsNullModel.Pvalue,3)),'FontName','Arial','Color',[1 0 0]);
-    % text(-.04,60,strcat("r-sq. = ",num2str(mdl.Rsquared.Ordinary,3)),'FontName','Arial','Color',[1 0 0]);
     disp(strcat(pairNames{npt},"base window fit p-val = ",num2str(mdl.ModelFitVsNullModel.Pvalue,3)));
     disp(strcat(pairNames{npt},"base window fit r-sq. = ",num2str(mdl.Rsquared.Ordinary,3)));
     disp(strcat("slope = ",num2str(mdl.Coefficients.Estimate(2),3)));
@@ -313,18 +319,17 @@ for npt = 2 : 3 % num pair types (EXC:EXC, EXC:PV, EXC:SOM, PV:PV, SOM:SOM)
     end
     locMeanCorr2 = locMeanCorr2(~trainedSess);
     plot(locMeanCorr2,PCTloc,'.','Color',[0 0 0.7]);
-    % linear model fit
+
+    % LINEAR MODEL FIT
     mdl = fitlm(locMeanCorr2,PCTloc);
     xGrid = linspace(min(locMeanCorr2(~isnan(PCTloc2))), max(locMeanCorr2(~isnan(PCTloc2))), 100)'; 
     [y,ci] = predict(mdl,xGrid);
     plot(xGrid, y, 'b-', xGrid, ci(:,1), 'b:', xGrid, ci(:,2), 'b:', 'LineWidth', 1);
-    % text(-.04,57.5,strcat("p-val = ",num2str(mdl.ModelFitVsNullModel.Pvalue,3)),'FontName','Arial','Color',[0 0 1]);
-    % text(-.04,55,strcat("r-sq. = ",num2str(mdl.Rsquared.Ordinary,3)),'FontName','Arial','Color',[0 0 1]);
     disp(strcat(pairNames{npt}," late window fit p-val = ",num2str(mdl.ModelFitVsNullModel.Pvalue,3)));
     disp(strcat(pairNames{npt}," late window fit r-sq. = ",num2str(mdl.Rsquared.Ordinary,3)));
     disp(strcat("slope = ",num2str(mdl.Coefficients.Estimate(2),3)));
 
-    % adjustments
+    % FIGURE ADJUSTMENTS 
     set(gca,'XLim',[.1 .8],'YLim',[10 80]);
     ylabel('Frequency decoding accuracy %','FontName','Arial');
     xlabel('Mean neuron corr value','FontName','Arial');
@@ -335,14 +340,17 @@ for npt = 2 : 3 % num pair types (EXC:EXC, EXC:PV, EXC:SOM, PV:PV, SOM:SOM)
     end
     hold off;
 
-    % additional sub-plot
+    % ADDITIONAL SUBPLOT | CORR SCATTER
     figure('Color',[1 1 1]);
     plot(locMeanCorr1,locMeanCorr2,'k.');
     set(gca,'XLim',[0 .8],'YLim',[0 .8],'box','off');
 
 end
 
-% Additional plost: average accuracy across 3 conditions (EXC:EXC, EXC:PV, EXC:SOM)
+
+
+
+%%  Additional plost: average accuracy across 3 conditions (EXC:EXC, EXC:PV, EXC:SOM)
 % FREQUENCY-SELECTIVE UNITS ONLY
 figure('Color',[1 1 1]); hold on;
 for nc = 1 : length(cellType)
@@ -357,49 +365,55 @@ title("Average within-session decoding accuracy",'FontName','Arial');
 
 % ALL AVAILABLE UNITS
 figure('Color',[1 1 1]); hold on;
+
 % PV+EXC BAR
-yVals1 = allAccAA{1}(~isnan(allAccAA{1}));
+yVals1 = allAcc{1}(~isnan(allAcc{1}));
 yMean = mean(yVals1);
 yCI = mkCI(yVals1);
 bar(1,yMean,'FaceColor',colors.PV);
 errorbar(1,yMean,yMean-yCI(1),'vertical','Color',[0 0 0]);
 % EXC-ALONE BAR (NO PV)
-yVals2 = allAccAA{3}(~isnan(allAccAA{1}));
+yVals2 = allAcc{3}(~isnan(allAcc{1}));
 yMean = mean(yVals2,'omitnan');
 yCI = mkCI(yVals2);
 bar(2,yMean,'FaceColor',colors.EXC);
 errorbar(2,yMean,yMean-yCI(1),'vertical','Color',[0 0 0]);
 % 2-sided Kolmogorov-Smirnov test [PV+EXC : EXC-alone]
-[h,p,ks2stat] = kstest2(yVals1,yVals2);
-disp(p)
+[~,p,~] = kstest2(yVals1,yVals2);
+disp(p);
+plot([1 2],[53 53],'k-');
 if p < 0.05
-    plot([1 2],[53 53],'k-');
     text(1.5,53,'*','HorizontalAlignment','center','VerticalAlignment','bottom',...
         'FontName','Arial','FontSize',12);
+else
+    text(1.5,53,'n.s.','HorizontalAlignment','center','VerticalAlignment','bottom',...
+        'FontName','Arial','FontSize',12);
 end
-
 % SOM+EXC BAR
-yVals3 = allAccAA{2}(~isnan(allAccAA{2}));
+yVals3 = allAcc{2}(~isnan(allAcc{2}));
 yMean = mean(yVals3);
 yCI = mkCI(yVals3);
 bar(3,yMean,'FaceColor',colors.SOM);
 errorbar(3,yMean,yMean-yCI(1),'vertical','Color',[0 0 0]);
 % EXC-ALONE BAR (NO SOM)
-yVals4 = allAccAA{3}(~isnan(allAccAA{2}));
+yVals4 = allAcc{3}(~isnan(allAcc{2}));
 yMean = mean(yVals4,'omitnan');
 yCI = mkCI(yVals4);
 bar(4,yMean,'FaceColor',colors.EXC);
 errorbar(4,yMean,yMean-yCI(1),'vertical','Color',[0 0 0]);
 % 2-sided Kolmogorov-Smirnov test [PV+EXC : EXC-alone]
-[h,p,ks2stat] = kstest2(yVals3,yVals4);
-disp(p)
+[~,p,~] = kstest2(yVals3,yVals4);
+disp(p);
+plot([3 4],[53 53],'k-');
 if p < 0.05
-    plot([3 4],[53 53],'k-');
     text(3.5,53,'*','HorizontalAlignment','center','VerticalAlignment','bottom',...
+        'FontName','Arial','FontSize',12);
+else
+    text(3.5,53,'n.s.','HorizontalAlignment','center','VerticalAlignment','bottom',...
         'FontName','Arial','FontSize',12);
 end
 
-
+% FIGURE ADJUSTMENTS
 set(gca,'XLim',[0.2 4.8],'XTick',1:4,'YLim',[32.5 57.5],'XTickLabel',{'PV+EXC','EXC alone','SOM+EXC','EXC alone'},...
     'XTickLabelRotation',-20);
 ylabel('Mean frequency decoding accuracy %','FontName','Arial');

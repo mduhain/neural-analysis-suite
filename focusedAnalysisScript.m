@@ -45,8 +45,8 @@ d1AmpVals = zscore(ampValsOg);
 %% DECLARE ACTIVE DATASET
 
 % USER INPUTS (CHANGE THESE)
-Tc = T2; % <---- % T1 (Dataset1), T2 (dataset2)
-minTrialNum = 15; % 25 (Dataset1) | 15 (Dataset2)
+Tc = T1; % <---- % T1 (Dataset1), T2 (dataset2)
+minTrialNum = 25; % 25 (Dataset1) | 15 (Dataset2)
 
 clear T1 T2 % remove others from memory to save RAM
 % cellType = unique(Tc.identity);

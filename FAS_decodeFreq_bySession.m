@@ -25,6 +25,8 @@ PCTall = zeros(nIter,length(sessIDs),length(gammaSteps),length(deltaSteps),2); %
 MDLall = cell(nIter,length(sessIDs),length(gammaSteps),length(deltaSteps),2); % (nj,ns,ng,nd)
 CVEall = zeros(nIter,length(sessIDs),length(gammaSteps),length(deltaSteps),2);
 PCFall = cell(nIter,length(sessIDs),length(gammaSteps),length(deltaSteps),2); % (nj,ns,ng,nd)
+PredAll = cell(nIter,length(sessIDs),length(gammaSteps),length(deltaSteps),2); % all predicted frequencies
+TrueAll = cell(nIter,length(sessIDs),length(gammaSteps),length(deltaSteps),2); % all true frequencies
 
 for ns = 1:length(sessIDs) %nt = 1 : length(selType)
     locSess = char(sessIDs(ns)); % local session name 'm000_00'
@@ -244,6 +246,8 @@ for ns = 1:length(sessIDs) %nt = 1 : length(selType)
                         'Delta',deltaSteps(ne));
                     predFreq = predict(mdl,testRespS*coeffS(:,kStart:kComp));
                     % collect output
+                    PredAll{nj,ns,ng,ne,1} = predFreq;
+                    TrueAll{nj,ns,ng,ne,1} = testFreq;
                     PCTall(nj,ns,ng,ne,1) = mean(predFreq == testFreq); % accuracy
                     MDLall{nj,ns,ng,ne,1} = mdl; % model parameters
                     % PCFall{nj,ns,ng,ne,1} = cat(3, PCtunings, PCvariation); % accuracy
@@ -279,6 +283,8 @@ for ns = 1:length(sessIDs) %nt = 1 : length(selType)
                     mdl = fitcdiscr(trainRespS,trainFreq,'DiscrimType','linear','Gamma',gammaSteps(ng),...
                         'Delta',deltaSteps(ne));
                     predFreq = predict(mdl,testRespS);
+                    PredAll{nj,ns,ng,ne,1} = predFreq;
+                    TrueAll{nj,ns,ng,ne,1} = testFreq;
                     PCTall(nj,ns,ng,ne,1) = mean(predFreq == testFreq); % accuracy
                     MDLall{nj,ns,ng,ne,1} = mdl; % model parameters
                     % Pseudo-Pop
@@ -335,13 +341,72 @@ elseif onlyEXC == false && lateRespWin == false
     PCTall_baseline = squeeze(PCTall);
 end
 
+%% Confusion Matrix
+
+% Load in Data
+load('PCT_dataset1_withinSess_freqSel.mat','PredAll','TrueAll');
+PredFS = PredAll;
+TrueFS = TrueAll;
+load('PCT_dataset1_withinSess_allAvail.mat','PredAll','TrueAll');
+PredAA = PredAll;
+TrueAA = TrueAll;
+
+% Plotting
+figure;
+tiledlayout(1,2);
+
+% Frequency-Selective Units
+nexttile();
+allPredValsFS = [];
+allTrueValsFS = [];
+for ns = 1:length(sessIDs)
+    targSess = ns;
+    % check if session was fully trained / predicted with
+    if isempty(PredFS{1,targSess,1,1,1})
+        continue
+    end
+    allPredValsFS = cat(1,allPredValsFS,PredFS{:,targSess,1,1,1});
+    allTrueValsFS = cat(1,allTrueValsFS,TrueFS{:,targSess,1,1,1});
+end
+confusionchart(allTrueValsFS,allPredValsFS,'Normalization','total-normalized',...
+    "DiagonalColor",'b','OffDiagonalColor','r');
+xlabel('Predicted Frequency (Hz)');
+ylabel('True Frequency (Hz)');
+
+% All Available Units
+nexttile();
+allPredValsAA = [];
+allTrueValsAA = [];
+for ns = 1:length(sessIDs)
+    targSess = ns;
+    % check if session was fully trained / predicted with
+    % using FS data, since there are more AA neurons, more fully trained
+    % sessions which dont have a paired FS model set.
+    if isempty(PredFS{1,targSess,1,1,1})
+        continue
+    end
+    allPredValsAA = cat(1,allPredValsAA,PredAA{:,targSess,1,1,1});
+    allTrueValsAA = cat(1,allTrueValsAA,TrueAA{:,targSess,1,1,1});
+end
+confusionchart(allTrueValsAA,allPredValsAA,'Normalization','total-normalized',...
+    "DiagonalColor",'b','OffDiagonalColor','r');
+xlabel('Predicted Frequency (Hz)');
+ylabel('True Frequency (Hz)');
 
 
 %% Dataset 1: Within-Session Decoding, frequency-selective vs. all-available
 
-load('PCT_dataset1_withinSess_freqSelVsAllAvail.mat'); % 'PCT_FS' & 'PCT_AA'
-PCT_FS = PCT_FS(:,1) * 100;
-PCT_AA = PCT_AA(:,1) * 100;
+% load('PCT_dataset1_withinSess_freqSelVsAllAvail.mat'); % 'PCT_FS' & 'PCT_AA'
+% PCT_FS = PCT_FS(:,1) * 100; % remove pseudo-pop data
+% PCT_AA = PCT_AA(:,1) * 100; % remove pseudo-pop data
+
+
+% 2026-07-14 (validation run)
+load('PCT_dataset1_withinSess_freqSel.mat','PCTall');
+PCT_FS = mean(PCTall(:,:,1,1,1),1)' * 100;
+load('PCT_dataset1_withinSess_allAvail.mat','PCTall');
+PCT_AA = mean(PCTall(:,:,1,1,1),1)' * 100;
+
 
 idx = (PCT_FS(:) ~= 0) & (PCT_AA(:) ~= 0);
 

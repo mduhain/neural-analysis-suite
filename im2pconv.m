@@ -7,6 +7,8 @@
 % 
 %% Importing Data
 
+% 
+
 % hardcoded temp variables (EDIT AS NEEDED)
 tFileNum = 1; %if multiple im2p files exist in this folder
 tMouseID = 'm810';
@@ -117,7 +119,7 @@ dI = [0; dI];
 I(dI == 1) = [];
 I(1:3) = []; %remove first three flashes (exp start id)
 disp(strcat(num2str(length(I))," trials identified from RFP Trace."));
-%more calculations of other relevent ata
+%more calculations of other relevent data
 nRealTrials = length(I);
 stimOnTimes = I ./ tRawFramerate;
 interStimInterval = diff(stimOnTimes);
