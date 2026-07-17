@@ -674,7 +674,7 @@ legend({"Interaction","Both mod.","Freq. mod.","PV","SOM","EXC"},'NumColumns',2)
 % legend({"Interaction","Both mod.","Freq. mod.","PV","SOM","EXC"},'NumColumns',2);
 
 
-%% Over/Under prediction analysis
+%% BIAS OVER/UNDER PREDICTION ANALYSIS
 
 % cd('D:\Tactile_Synchrony\2P-Data\Cleaned\datasets');
 % load('modelResults_dataset2_ampDecode_predictionAnalysis.mat'); % 'PCTall','MDLall','predFreqAll','testFreqAll'
@@ -703,28 +703,63 @@ for nf = 1 : size(PCTall,1) % loop frequency (5)
 end
 set(gca,'XTick',1:5,'XTickLabels',freqValAll,'XLim',[0.6 5.4]);
 xlabel('Frequency (Hz)','FontName','Arial');
-ylabel({'Average prediction error','(predicted - true)'},'FontName','Arial');
+ylabel({'Average prediction error (\mum)','(predicted - true)'},'FontName','Arial');
 title('Amplitude decoding bias','FontName','Arial');
 
+% EVALUATE WITH MODEL FITS AND PLOT
 for nc = 1 : length(cellType)
     disp(cellType(nc));
     locYs = squeeze(allDiffs(:,:,targSel,nc)); % average difference values, amp by reps
     locY_vect = locYs(~isnan(locYs)); % remove NaN and vectorize
     locXs = repmat((1:5)',1,size(allDiffs,2)); % average difference values, amp by reps
     locX_vect = locXs(~isnan(locYs)); % remove NaN and vectorize
-    locMdl = fitlm(locX_vect,locY_vect) % linear fit
-    [fitobject,gof,output] = fit(locX_vect,locY_vect,'exp1');
+
+    % LINEAR FIT
+    locMdl = fitlm(locX_vect,locY_vect); % linear fit
+    AIC_linear = locMdl.ModelCriterion.AIC; % AIC
+    fitSigLinear = locMdl.ModelFitVsNullModel.Pvalue < pValThresh; % significance of linear fit
+    slope_Linear = locMdl.Coefficients.Estimate(2);
+    rsq_Linear = locMdl.Rsquared.Adjusted;
+    pval_Linear = locMdl.ModelFitVsNullModel.Pvalue;
+
+    % EXP 1 FIT
+    [fitobject,gof,output] = fit(locX_vect,locY_vect,'exp2');
+    AIC_exp = output.numobs * log(gof.sse / output.numobs) + 2 * output.numparam; % AIC
+    confBounds = confint(fitobject); % 95% confidence bounds of coefficients
+    fitSigExp = all(confBounds(1,:).*confBounds(2,:) > 0); % check for same sign in coeff bounds
+
+    % COMPARE MODELS
     xFine = linspace(min(locX_vect),max(locX_vect),100)';
-    % Compare models
-    if locMdl.Rsquared.Adjusted > gof.adjrsquare % linear model better
+    if fitSigLinear == true && fitSigExp == false
+        % ONLY Linear model significant
         yFit = predict(locMdl,xFine);
         plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
-    elseif locMdl.Rsquared.Adjusted < gof.adjrsquare % power model better
+    elseif fitSigLinear == false && fitSigExp == true 
+        % ONLY Exponential model significant
         yFit = feval(fitobject, xFine); 
         yPI = predint(fitobject, xFine, 0.95); % 95% prediction intervals
         coefBounds = confint(fitobject, 0.95); % coeff. conf. bounds
         plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
+    elseif fitSigLinear == true && fitSigExp == true 
+        % BOTH models are significant, compare AIC
+        if AIC_linear > AIC_exp 
+            % Linear model has higher AIC
+            yFit = predict(locMdl,xFine);
+            plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
+        elseif AIC_linear < AIC_exp 
+            % Exponential model has higher AIC
+            yFit = feval(fitobject, xFine); 
+            plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
+        else 
+            % EQUAL AIC value (unlikely)
+            error('models have equal AIC');
+        end
+    else 
+        % NEITHER model is significant
+        error('Both models are insignificant fits');
     end
+    disp(strcat(cellType(nc),": (p-val. = ",num2str(pval_Linear,3),", r-sq. = ",...
+        num2str(rsq_Linear,3),", slope = ",num2str(slope_Linear,3),")"));
 end
 
 

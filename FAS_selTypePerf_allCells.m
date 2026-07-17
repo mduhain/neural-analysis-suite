@@ -1145,10 +1145,12 @@ legend('Location', 'best');
 
 
 
-%% Over/Under prediction analysis 4 SEL TYPES
+%% BIAS OVER/UNDER PREDICTION ANALYSIS 
+
+pValThresh = 0.05;
 
 % cd('D:\Tactile_Synchrony\2P-Data\Cleaned\datasets');
-% load('modelResults_dataset2_ampDecode_predictionAnalysis.mat'); % 'PCTall','MDLall','predFreqAll','testFreqAll'
+load('modelResults_dataset2_ampDecode_predictionAnalysis.mat') % 'PCTall','predFreqAll','testFreqAll'
 % dimension IDs: nFreq, nIter, selType, 1, cellType
 
 % FOR Prediction analysis with all selective types pooled, re-run first
@@ -1159,6 +1161,7 @@ xSp = [-0.2 0 0.2]; % x-axis plot spacing
 allDiffs = zeros(size(PCTall,1),size(PCTall,2),size(PCTall,3),size(PCTall,5)); % 5 x 200 x 4 x 3
 
 figure('Color',[1 1 1]); hold on;
+plot([0 6],[0 0],'k:','LineWidth',0.2);
 for na = 1 : size(PCTall,1) % loop amplitude (5)
     for nc = 1 : size(PCTall,5) % loop Cell Type (3)
         for ni = 1 : size(PCTall,2) % loop nIter (200)
@@ -1177,25 +1180,62 @@ for na = 1 : size(PCTall,1) % loop amplitude (5)
 end
 set(gca,'XTick',1:5,'XTickLabels',ampValAll,'XLim',[0.6 5.4]);
 xlabel('Amplitude (\mum)','FontName','Arial');
-ylabel({'Average prediction error','(predicted - true)'},'FontName','Arial');
+ylabel({'Average prediction error (Hz)','(predicted - true)'},'FontName','Arial');
 title('Frequency decoding bias','FontName','Arial');
 
+% EVALUATE WITH MODEL FITS AND PLOT
 for nc = 1 : length(cellType)
     disp(cellType(nc));
     locYs = squeeze(allDiffs(:,:,targSel,nc)); % average difference values, amp by reps
     locY_vect = locYs(~isnan(locYs)); % remove NaN and vectorize
     locXs = repmat((1:5)',1,size(allDiffs,2)); % average difference values, amp by reps
     locX_vect = locXs(~isnan(locYs)); % remove NaN and vectorize
-    locMdl = fitlm(locX_vect,locY_vect); % linear fit
-    [fitobject,gof,output] = fit(locX_vect,locY_vect,'power2')
+
+    % LINEAR FIT
+    locMdl = fitlm(locX_vect,locY_vect); % linear model
+    AIC_linear = locMdl.ModelCriterion.AIC; % AIC
+    fitSigLinear = locMdl.ModelFitVsNullModel.Pvalue < pValThresh; % significance of linear fit
+    slope_Linear = locMdl.Coefficients.Estimate(2);
+    rsq_Linear = locMdl.Rsquared.Adjusted;
+    pval_Linear = locMdl.ModelFitVsNullModel.Pvalue;
+
+    % POWER 2 FIT
+    [fitobject,gof,output] = fit(locX_vect,locY_vect,'power2'); % power2 model
+    AIC_power = output.numobs * log(gof.sse / output.numobs) + 2 * output.numparam; % AIC
+    confBounds = confint(fitobject); % 95% confidence bounds of coefficients
+    fitSigPower = all(confBounds(1,:).*confBounds(2,:) > 0); % check for same sign in coeff bounds
+
+    % COMPARE MODELS
     xFine = linspace(min(locX_vect),max(locX_vect),100)';
-    if locMdl.Rsquared.Adjusted > gof.adjrsquare % linear model better
-        
-    elseif locMdl.Rsquared.Adjusted < gof.adjrsquare % power model better
+    if fitSigLinear == true && fitSigPower == false
+        % ONLY Linear model significant
+        yFit = predict(locMdl,xFine);
+        plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
+    elseif fitSigLinear == false && fitSigPower == true 
+        % ONLY Power model significant
         yFit = feval(fitobject, xFine); 
         yPI = predint(fitobject, xFine, 0.95); % 95% prediction intervals
         coefBounds = confint(fitobject, 0.95); % coeff. conf. bounds
         plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
+    elseif fitSigLinear == true && fitSigPower == true 
+        % BOTH models are significant, compare AIC
+        if AIC_linear > AIC_power 
+            % Linear model has higher AIC
+            yFit = predict(locMdl,xFine);
+            plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
+        elseif AIC_linear < AIC_power 
+            % Power model has higher AIC
+            yFit = feval(fitobject, xFine); 
+            plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
+        else 
+            % EQUAL AIC value (unlikely)
+            error('models have equal AIC');
+        end
+    else 
+        % NEITHER model is significant
+        error('Both models are insignificant fits');
     end
+    disp(strcat(cellType(nc),": (p-val. = ",num2str(pval_Linear,3),", r-sq. = ",...
+        num2str(rsq_Linear,3),", slope = ",num2str(slope_Linear,3),")"));
 end
 
