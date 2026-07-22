@@ -422,4 +422,23 @@ title("Average within-session decoding accuracy",'FontName','Arial');
 
 
 
+%% PV:EXC vs SOM:EXC decoding as histograms
+
+% PV+EXC BAR
+yVals1 = allAcc{1}(~isnan(allAcc{1}));
+
+% SOM+EXC BAR
+yVals3 = allAcc{2}(~isnan(allAcc{2}));
+
+% ALL AVAILABLE UNITS
+figure('Color',[1 1 1]); hold on;
+histogram(yVals1,'FaceAlpha',0.8,'FaceColor',colors.PV);
+histogram(yVals3,'FaceAlpha',0.8,'FaceColor',colors.SOM);
+
+
+
+
+
+
+
 

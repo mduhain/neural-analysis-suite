@@ -341,7 +341,43 @@ elseif onlyEXC == false && lateRespWin == false
     PCTall_baseline = squeeze(PCTall);
 end
 
-%% Confusion Matrix
+%% PV+EXC vs. SOM+EXC
+figure('Color',[1 1 1]); hold on;
+% tiledlayout(4,4);
+
+% nexttile([3 4]); hold on;
+accPV = [];
+accSOM = [];
+for ns = 1 : length(sessIDs)
+    if PCT(ns) ~= 0 % session with non-zero avg accuracy
+        if any(is.sessID(:,ns) & is.PV) % PV + EXC session
+            accPV = cat(1,accPV,PCT(ns,1)*100);
+        elseif any(is.sessID(:,ns) & is.SOM) % SOM + EXC session
+            accSOM = cat(1,accSOM,PCT(ns,1)*100);
+        end
+    end
+end
+histogram(accPV,'Normalization','percentage','NumBins',10,'FaceAlpha',0.5,'FaceColor',colors.PV);
+histogram(accSOM,'Normalization','percentage','NumBins',10,'FaceAlpha',0.5,'FaceColor',colors.SOM);
+ylabel('% of sessions','FontName','Arial');
+xlabel('Decoding accuracy (%)','FontName','Arial');
+title('Within-session frequency decoding','FontName','Arial');
+set(gca,'XLim',[7 77],'YLim',[0 21]);
+
+% nexttile([1 4]); hold on;
+meanPV = mean(accPV);
+ciPV = mkCI(accPV);
+errorbar(meanPV,20,ciPV(2)-meanPV,'horizontal','Color',colors.PV,'LineWidth',1);
+plot(meanPV,20,'.','MarkerSize',10,'Color',colors.PV);
+meanSOM = mean(accSOM);
+ciSOM = mkCI(accSOM);
+errorbar(meanSOM,20,ciSOM(2)-meanSOM,'horizontal','Color',colors.SOM,'LineWidth',1);
+plot(meanSOM,20,'.','MarkerSize',10,'Color',colors.SOM);
+
+legend({'PV+EXC','SOM+EXC',''},'Box','off','FontName','Arial');
+
+
+%% Confusion Matrix (old version)
 
 % Load in Data
 load('PCT_dataset1_withinSess_freqSel.mat','PredAll','TrueAll');
@@ -353,28 +389,28 @@ TrueAA = TrueAll;
 
 % Plotting
 figure;
-tiledlayout(1,2);
+% tiledlayout(1,2);
 
-% Frequency-Selective Units
-nexttile();
-allPredValsFS = [];
-allTrueValsFS = [];
-for ns = 1:length(sessIDs)
-    targSess = ns;
-    % check if session was fully trained / predicted with
-    if isempty(PredFS{1,targSess,1,1,1})
-        continue
-    end
-    allPredValsFS = cat(1,allPredValsFS,PredFS{:,targSess,1,1,1});
-    allTrueValsFS = cat(1,allTrueValsFS,TrueFS{:,targSess,1,1,1});
-end
-confusionchart(allTrueValsFS,allPredValsFS,'Normalization','total-normalized',...
-    "DiagonalColor",'b','OffDiagonalColor','r');
-xlabel('Predicted Frequency (Hz)');
-ylabel('True Frequency (Hz)');
+% % FREQUENCY-SELECTIVE UNITS
+% nexttile();
+% allPredValsFS = [];
+% allTrueValsFS = [];
+% for ns = 1:length(sessIDs)
+%     targSess = ns;
+%     % check if session was fully trained / predicted with
+%     if isempty(PredFS{1,targSess,1,1,1})
+%         continue
+%     end
+%     allPredValsFS = cat(1,allPredValsFS,PredFS{:,targSess,1,1,1});
+%     allTrueValsFS = cat(1,allTrueValsFS,TrueFS{:,targSess,1,1,1});
+% end
+% confusionchart(allTrueValsFS,allPredValsFS,'Normalization','total-normalized',...
+%     "DiagonalColor",'b','OffDiagonalColor','r');
+% xlabel('Predicted Frequency (Hz)');
+% ylabel('True Frequency (Hz)');
 
-% All Available Units
-nexttile();
+% ALL AVAILABLE UNITS
+% nexttile();
 allPredValsAA = [];
 allTrueValsAA = [];
 for ns = 1:length(sessIDs)
@@ -388,10 +424,47 @@ for ns = 1:length(sessIDs)
     allPredValsAA = cat(1,allPredValsAA,PredAA{:,targSess,1,1,1});
     allTrueValsAA = cat(1,allTrueValsAA,TrueAA{:,targSess,1,1,1});
 end
-confusionchart(allTrueValsAA,allPredValsAA,'Normalization','total-normalized',...
-    "DiagonalColor",'b','OffDiagonalColor','r');
+confusionchart(allTrueValsAA,allPredValsAA,'Normalization','column-normalized',...
+    "DiagonalColor",'k','OffDiagonalColor','k');
 xlabel('Predicted Frequency (Hz)');
 ylabel('True Frequency (Hz)');
+
+
+%% new alternative confusion chart (2026-07-21)
+
+% compute confusion matrix and class order
+[C,order] = confusionmat(allTrueValsAA,allPredValsAA);
+
+% column-normalized matrix (columns sum to 1)
+colSums = sum(C,1);
+colNorm = C ./ colSums;
+
+% total-normalized matrix (each entry divided by total sum)
+totalNorm = C / sum(C(:));
+
+% display
+figure('Color',[1 1 1]);
+imagesc(colNorm.*100);
+
+% % Custom grayscale colormap from [0.9 0.9 0.9] to [0.1 0.1 0.1] with CLim [0 70]
+% nC = 256; % number of colors
+% cmap = [linspace(0.9,0.1,nC)' repmat(linspace(0.9,0.1,nC)',1,2)];
+
+colormap(parula);
+clim([0 70]); % set color limits
+colorbar; % optional: show colorbar
+
+% adjust
+set(gca,'YTick',1:5,'YTickLabel',order,'XTickLabel',order,'FontName','Arial');
+xlabel('Predicted Frequency (Hz)','FontName','Arial');
+ylabel('True Frequency (Hz)','FontName','Arial');
+title('Average within-session frequency decoding','FontName','Arial');
+subtitle('Column-normalized (color), total-normalized (label)','FontName','Arial');
+for nv = 1 : 5
+    locVal = strcat(num2str(totalNorm(nv,nv)*100,3),"%");
+    text(nv,nv,locVal,'HorizontalAlignment','center','VerticalAlignment','middle')
+end
+
 
 
 %% Dataset 1: Within-Session Decoding, frequency-selective vs. all-available

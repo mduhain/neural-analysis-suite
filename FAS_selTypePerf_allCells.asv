@@ -1229,5 +1229,6 @@ for nc = 1 : length(cellType)
     % DISPLAY OUTPUTS
     disp(strcat(cellType(nc)," ",bestMdl,": p-val. = ",num2str(pValue_overall,3),", r-sq. = ",...
         num2str(adjRSq,3)));
+    
 end
 

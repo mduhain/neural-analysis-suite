@@ -677,7 +677,7 @@ legend({"Interaction","Both mod.","Freq. mod.","PV","SOM","EXC"},'NumColumns',2)
 %% BIAS OVER/UNDER PREDICTION ANALYSIS
 
 % cd('D:\Tactile_Synchrony\2P-Data\Cleaned\datasets');
-% load('modelResults_dataset2_ampDecode_predictionAnalysis.mat'); % 'PCTall','MDLall','predFreqAll','testFreqAll'
+load('modelResults_dataset2_ampDecode_predictionAnalysis.mat'); % 'PCTall','MDLall','predFreqAll','testFreqAll'
 % dimension IDs: nFreq, nIter, selType, 1, cellType
 
 targSel = 1;
@@ -714,52 +714,44 @@ for nc = 1 : length(cellType)
     locXs = repmat((1:5)',1,size(allDiffs,2)); % average difference values, amp by reps
     locX_vect = locXs(~isnan(locYs)); % remove NaN and vectorize
 
-    % LINEAR FIT
-    locMdl = fitlm(locX_vect,locY_vect); % linear fit
-    AIC_linear = locMdl.ModelCriterion.AIC; % AIC
-    fitSigLinear = locMdl.ModelFitVsNullModel.Pvalue < pValThresh; % significance of linear fit
-    slope_Linear = locMdl.Coefficients.Estimate(2);
-    rsq_Linear = locMdl.Rsquared.Adjusted;
-    pval_Linear = locMdl.ModelFitVsNullModel.Pvalue;
-
-    % EXP 1 FIT
-    [fitobject,gof,output] = fit(locX_vect,locY_vect,'exp2');
-    AIC_exp = output.numobs * log(gof.sse / output.numobs) + 2 * output.numparam; % AIC
-    confBounds = confint(fitobject); % 95% confidence bounds of coefficients
-    fitSigExp = all(confBounds(1,:).*confBounds(2,:) > 0); % check for same sign in coeff bounds
+    % FIT MULTIPLE MODEL TYPES
+    fits = struct();
+    fitTypes = ["poly1","poly2","power1","power2","exp1","exp2","log"]; % list of fit types
+    for nt = 1 : length(fitTypes)
+        LFT = fitTypes(nt); % Local Fit Type
+        [fits.(LFT).fitobject, fits.(LFT).gof, fits.(LFT).output] = fit(locX_vect,locY_vect,LFT); % fit model with local fit type
+        fits.(LFT).AIC = fits.(LFT).output.numobs * log(fits.(LFT).gof.sse / fits.(LFT).output.numobs)...
+            + 2 * fits.(LFT).output.numparam; % Calculate Akaike Information Criterion (AIC)
+        fits.(LFT).confBounds = confint(fits.(LFT).fitobject); % 95% confidence bounds of coefficients
+        fits.(LFT).sig = all(fits.(LFT).confBounds(1,:).*fits.(LFT).confBounds(2,:) > 0); % check for model significance (same sign in coeff bounds)
+    end
 
     % COMPARE MODELS
     xFine = linspace(min(locX_vect),max(locX_vect),100)';
-    if fitSigLinear == true && fitSigExp == false
-        % ONLY Linear model significant
-        yFit = predict(locMdl,xFine);
-        plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
-    elseif fitSigLinear == false && fitSigExp == true 
-        % ONLY Exponential model significant
-        yFit = feval(fitobject, xFine); 
-        yPI = predint(fitobject, xFine, 0.95); % 95% prediction intervals
-        coefBounds = confint(fitobject, 0.95); % coeff. conf. bounds
-        plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
-    elseif fitSigLinear == true && fitSigExp == true 
-        % BOTH models are significant, compare AIC
-        if AIC_linear > AIC_exp 
-            % Linear model has higher AIC
-            yFit = predict(locMdl,xFine);
-            plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
-        elseif AIC_linear < AIC_exp 
-            % Exponential model has higher AIC
-            yFit = feval(fitobject, xFine); 
-            plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
-        else 
-            % EQUAL AIC value (unlikely)
-            error('models have equal AIC');
-        end
-    else 
-        % NEITHER model is significant
-        error('Both models are insignificant fits');
-    end
-    disp(strcat(cellType(nc),": (p-val. = ",num2str(pval_Linear,3),", r-sq. = ",...
-        num2str(rsq_Linear,3),", slope = ",num2str(slope_Linear,3),")"));
+    sigMdls = arrayfun(@(f) fits.(f).sig, fitTypes); % which models are significant
+    allAICs = arrayfun(@(f) fits.(f).AIC, fitTypes); % all AIC values
+    sigMdlNames = fitTypes(sigMdls); % significant model types
+    sigAICs = allAICs(sigMdls); % significant AIC values
+    [~,idx] = min(sigAICs);
+    bestMdl = sigMdlNames(idx); % best model (significant, with lowest AIC)
+    yFit = feval(fits.(bestMdl).fitobject, xFine);
+    plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
+
+    % CALCULATE P-VALUE
+    nEl = numel(locY_vect);
+    numParams = fits.(bestMdl).output.numparam;  % number of parameters for mdoel
+    SSE = fits.(bestMdl).gof.sse; % sum of squared errors from fit
+    SST = sum((locY_vect - mean(locY_vect)).^2);
+    SSR = SST - SSE;
+    df1 = numParams - 1; % model df (excluding intercept)
+    df2 = nEl - numParams; % residual df
+    F = (SSR/df1) / (SSE/df2);
+    pValue_overall = 1 - fcdf(F, df1, df2);
+    adjRSq = fits.(bestMdl).gof.adjrsquare;
+
+    % DISPLAY OUTPUTS
+    disp(strcat(cellType(nc)," ",bestMdl,": p-val. = ",num2str(pValue_overall,3),", r-sq. = ",...
+        num2str(adjRSq,3)));
 end
 
 
