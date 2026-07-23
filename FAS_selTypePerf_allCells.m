@@ -1244,9 +1244,8 @@ for nc = 1 : length(cellType)
         allAICs = arrayfun(@(f) fits.(f).AIC, fitTypes); % all AIC values
         sigMdlNames = fitTypes(sigMdls); % significant model types
         sigAICs = allAICs(sigMdls); % significant AIC values
-        [~,idx] = min(sigAICs);
-        bestMdl = sigMdlNames(idx); % best model (significant, with lowest AIC)
-        
+        [~,idx] = min(sigAICs); % find best model (lowest AIC)
+        bestMdl = sigMdlNames(idx); % best model NAME
         if all(sigMdls == false)
             % no significant models found
             disp(strcat(cellType(nc)," no significant model found."));
@@ -1269,7 +1268,6 @@ for nc = 1 : length(cellType)
             disp(strcat(cellType(nc)," ",bestMdl,": p-val. = ",num2str(pValue_overall,3),", r-sq. = ",...
                 num2str(adjRSq,3)));
         end
-    
     end
 end
 
