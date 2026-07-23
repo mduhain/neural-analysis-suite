@@ -181,6 +181,9 @@ for nt = 1 : length(selType) %nd = 1 : length(nCellDraws)
             predAmpAll{nf,nj,nt,nd,nc} = predAmp;
             testAmpAll{nf,nj,nt,nd,nc} = testAmp;
             MDLall{nf,nj,nt,nd,nc} = mdl;
+
+            % FIT EACH ITERATION
+            
         end 
     end
     fprintf(newline)

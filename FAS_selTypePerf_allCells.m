@@ -1160,6 +1160,7 @@ targSel = 1;
 xSp = [-0.2 0 0.2]; % x-axis plot spacing
 allDiffs = zeros(size(PCTall,1),size(PCTall,2),size(PCTall,3),size(PCTall,5)); % 5 x 200 x 4 x 3
 
+% CALCULATE AVERAGE PREDICTION DIFFERENCE
 figure('Color',[1 1 1]); hold on;
 plot([0 6],[0 0],'k:','LineWidth',0.2);
 for na = 1 : size(PCTall,1) % loop amplitude (5)
@@ -1171,6 +1172,12 @@ for na = 1 : size(PCTall,1) % loop amplitude (5)
             locDiffs(locDiffs == 0) = []; % remove correct values (0)
             allDiffs(na,ni,targSel,nc) = mean(locDiffs);
         end
+    end
+end
+
+% PLOT VALUES PER CELL TYPE AND AMP
+for na = 1 : size(PCTall,1) % loop amplitude (5)
+    for nc = 1 : size(PCTall,5) % loop Cell Type (3)
         locX = na + xSp(nc); % x-position
         locY = mean(squeeze(allDiffs(na,:,targSel,nc)),'omitnan'); % average difference
         locCI = mkCI(squeeze(allDiffs(na,:,targSel,nc))); % 95 percent condifidence intervals
@@ -1183,51 +1190,86 @@ xlabel('Amplitude (\mum)','FontName','Arial');
 ylabel({'Average prediction error (Hz)','(predicted - true)'},'FontName','Arial');
 title('Frequency decoding bias','FontName','Arial');
 
-% EVALUATE WITH MODEL FITS AND PLOT
+%%  EVALUATE WITH MODEL FITS AND PLOT
+figure('color',[1 1 1]);
+tiledlayout(1,3,'TileSpacing','compact','Padding','compact');
 for nc = 1 : length(cellType)
-    disp(cellType(nc));
-    locYs = squeeze(allDiffs(:,:,targSel,nc)); % average difference values, amp by reps
-    locY_vect = locYs(~isnan(locYs)); % remove NaN and vectorize
-    locXs = repmat((1:5)',1,size(allDiffs,2)); % average difference values, amp by reps
-    locX_vect = locXs(~isnan(locYs)); % remove NaN and vectorize
-
-    % FIT MULTIPLE MDOEL TYPES
-    fits = struct();
-    fitTypes = ["poly1","poly2","power1","power2","exp1","exp2","log"]; % list of fit types
-    for nt = 1 : length(fitTypes)
-        LFT = fitTypes(nt); % Local Fit Type
-        [fits.(LFT).fitobject, fits.(LFT).gof, fits.(LFT).output] = fit(locX_vect,locY_vect,LFT); % fit model with local fit type
-        fits.(LFT).AIC = fits.(LFT).output.numobs * log(fits.(LFT).gof.sse / fits.(LFT).output.numobs)...
-            + 2 * fits.(LFT).output.numparam; % Calculate Akaike Information Criterion (AIC)
-        fits.(LFT).confBounds = confint(fits.(LFT).fitobject); % 95% confidence bounds of coefficients
-        fits.(LFT).sig = all(fits.(LFT).confBounds(1,:).*fits.(LFT).confBounds(2,:) > 0); % check for model significance (same sign in coeff bounds)
+    disp(" ");
+    % PLOT VALUES PER CELL TYPE AND AMP
+    nexttile(); hold on;
+    for na = 1 : size(PCTall,1) % loop amplitude (5)
+        locX = na + xSp(nc); % x-position
+        locY = mean(squeeze(allDiffs(na,:,targSel,nc)),'omitnan'); % average difference
+        locCI = mkCI(squeeze(allDiffs(na,:,targSel,nc))); % 95 percent condifidence intervals
+        errorbar(locX,locY,locY-locCI(1),'vertical','Color',colors.(cellType(nc)),'LineWidth',1);
+        plot(locX,locY,'.','Color',colors.(cellType(nc)),'MarkerSize',10);
     end
 
-    % COMPARE MODELS
-    xFine = linspace(min(locX_vect),max(locX_vect),100)';
-    sigMdls = arrayfun(@(f) fits.(f).sig, fitTypes); % which models are significant
-    allAICs = arrayfun(@(f) fits.(f).AIC, fitTypes); % all AIC values
-    sigMdlNames = fitTypes(sigMdls); % significant model types
-    sigAICs = allAICs(sigMdls); % significant AIC values
-    [~,idx] = min(sigAICs);
-    bestMdl = sigMdlNames(idx); % best model (significant, with lowest AIC)
-    yFit = feval(fits.(bestMdl).fitobject, xFine);
-    plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
+    % PLOT LABELS
+    if nc == 1
+        set(gca,'XTick',1:5,'XTickLabels',ampValAll,'XLim',[0.6 5.4]);
+        ylabel({'Average prediction error (Hz)','(predicted - true)'},'FontName','Arial');
+    elseif nc == 2
+        set(gca,'XTick',1:5,'XTickLabels',ampValAll,'XLim',[0.6 5.4]);
+        xlabel('Amplitude (\mum)','FontName','Arial');
+        title('Frequency decoding bias','FontName','Arial');
+    elseif nc == 3
+        set(gca,'XTick',1:5,'XTickLabels',ampValAll,'XLim',[0.6 5.4]);
+    end
 
-    % CALCULATE P-VALUE
-    nEl = numel(locY_vect);
-    numParams = fits.(bestMdl).output.numparam;  % number of parameters for mdoel
-    SSE = fits.(bestMdl).gof.sse; % sum of squared errors from fit
-    SST = sum((locY_vect - mean(locY_vect)).^2);
-    SSR = SST - SSE;
-    df1 = numParams - 1; % model df (excluding intercept)
-    df2 = nEl - numParams; % residual df
-    F = (SSR/df1) / (SSE/df2);
-    pValue_overall = 1 - fcdf(F, df1, df2);
-    adjRSq = fits.(bestMdl).gof.adjrsquare;
-
-    % DISPLAY OUTPUTS
-    disp(strcat(cellType(nc)," ",bestMdl,": p-val. = ",num2str(pValue_overall,3),", r-sq. = ",...
-        num2str(adjRSq,3)));
+    % JACK-KNIFE MODEL FITS (remove one amp at a time)
+    for nj = 1 : 5 
+        targAmps = 1:5;
+        targAmps(targAmps==nj) = []; % remove one amplitude
+        locYs = squeeze(allDiffs(targAmps,:,targSel,nc)); % average difference values, amp by reps
+        locY_vect = locYs(~isnan(locYs)); % remove NaN and vectorize
+        locXs = repmat((targAmps)',1,size(allDiffs,2)); % average difference values, amp by reps
+        locX_vect = locXs(~isnan(locYs)); % remove NaN and vectorize
+    
+        % FIT MULTIPLE MDOEL TYPES
+        fits = struct();
+        fitTypes = ["poly1","poly2","power1","power2","exp1","exp2","log"]; % list of fit types
+        for nt = 1 : length(fitTypes)
+            LFT = fitTypes(nt); % Local Fit Type
+            [fits.(LFT).fitobject, fits.(LFT).gof, fits.(LFT).output] = fit(locX_vect,locY_vect,LFT); % fit model with local fit type
+            fits.(LFT).AIC = fits.(LFT).output.numobs * log(fits.(LFT).gof.sse / fits.(LFT).output.numobs)...
+                + 2 * fits.(LFT).output.numparam; % Calculate Akaike Information Criterion (AIC)
+            fits.(LFT).confBounds = confint(fits.(LFT).fitobject); % 95% confidence bounds of coefficients
+            fits.(LFT).sig = all(fits.(LFT).confBounds(1,:).*fits.(LFT).confBounds(2,:) > 0); % check for model significance (same sign in coeff bounds)
+        end
+    
+        % COMPARE MODELS
+        xFine = linspace(min(locX_vect),max(locX_vect),100)';
+        sigMdls = arrayfun(@(f) fits.(f).sig, fitTypes); % which models are significant
+        allAICs = arrayfun(@(f) fits.(f).AIC, fitTypes); % all AIC values
+        sigMdlNames = fitTypes(sigMdls); % significant model types
+        sigAICs = allAICs(sigMdls); % significant AIC values
+        [~,idx] = min(sigAICs);
+        bestMdl = sigMdlNames(idx); % best model (significant, with lowest AIC)
+        
+        if all(sigMdls == false)
+            % no significant models found
+            disp(strcat(cellType(nc)," no significant model found."));
+        else
+            % COMPUTE POINTS ALONG MODEL
+            yFit = feval(fits.(bestMdl).fitobject, xFine);
+            plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
+            % CALCULATE P-VALUE
+            nEl = numel(locY_vect);
+            numParams = fits.(bestMdl).output.numparam;  % number of parameters for mdoel
+            SSE = fits.(bestMdl).gof.sse; % sum of squared errors from fit
+            SST = sum((locY_vect - mean(locY_vect)).^2);
+            SSR = SST - SSE;
+            df1 = numParams - 1; % model df (excluding intercept)
+            df2 = nEl - numParams; % residual df
+            F = (SSR/df1) / (SSE/df2);
+            pValue_overall = 1 - fcdf(F, df1, df2);
+            adjRSq = fits.(bestMdl).gof.adjrsquare;
+            % DISPLAY OUTPUTS
+            disp(strcat(cellType(nc)," ",bestMdl,": p-val. = ",num2str(pValue_overall,3),", r-sq. = ",...
+                num2str(adjRSq,3)));
+        end
+    
+    end
 end
 
