@@ -373,8 +373,14 @@ meanSOM = mean(accSOM);
 ciSOM = mkCI(accSOM);
 errorbar(meanSOM,20,ciSOM(2)-meanSOM,'horizontal','Color',colors.SOM,'LineWidth',1);
 plot(meanSOM,20,'.','MarkerSize',10,'Color',colors.SOM);
-
 legend({'PV+EXC','SOM+EXC',''},'Box','off','FontName','Arial');
+
+% Stats test
+[pVal, obsStat, permStats] = permTest2sample(accPV,accSOM,100000);
+if pVal < 0.05
+    text(mean([meanPV meanSOM]),20.5,'*','FontName','Arial','FontSize',10,'HorizontalAlignment','center',...
+        'VerticalAlignment','middle');
+end
 
 
 %% Confusion Matrix (old version)

@@ -716,6 +716,58 @@ xlabel('Frequency (Hz)','FontName','Arial');
 ylabel({'Average prediction error (\mum)','(predicted - true)'},'FontName','Arial');
 title('Amplitude decoding bias','FontName','Arial');
 
+% FIT DATA WITHIN EACH CELL TYPE
+for nc = 1 : length(cellType)
+    targFreqs = 1:5;
+    locYs = squeeze(allDiffs(targFreqs,:,targSel,nc)); % average difference values, amp by reps
+    locY_vect = locYs(~isnan(locYs)); % remove NaN and vectorize
+    locXs = repmat((targFreqs)',1,size(allDiffs,2)); % average difference values, amp by reps
+    locX_vect = locXs(~isnan(locYs)); % remove NaN and vectorize
+
+    % FIT MULTIPLE MODEL TYPES
+    fits = struct();
+    fitTypes = ["poly1","poly2","power1","power2","exp1","exp2","log"]; % list of fit types
+    for nt = 1 : length(fitTypes)
+        LFT = fitTypes(nt); % Local Fit Type
+        [fits.(LFT).fitobject, fits.(LFT).gof, fits.(LFT).output] = fit(locX_vect,locY_vect,LFT); % fit model with local fit type
+        fits.(LFT).AIC = fits.(LFT).output.numobs * log(fits.(LFT).gof.sse / fits.(LFT).output.numobs)...
+            + 2 * fits.(LFT).output.numparam; % Calculate Akaike Information Criterion (AIC)
+        fits.(LFT).confBounds = confint(fits.(LFT).fitobject); % 95% confidence bounds of coefficients
+        fits.(LFT).sig = all(fits.(LFT).confBounds(1,:).*fits.(LFT).confBounds(2,:) > 0); % check for model significance (same sign in coeff bounds)
+    end
+
+    % COMPARE MODELS
+    xFine = linspace(min(locX_vect),max(locX_vect),100)';
+    sigMdls = arrayfun(@(f) fits.(f).sig, fitTypes); % which models are significant
+    allAICs = arrayfun(@(f) fits.(f).AIC, fitTypes); % all AIC values
+    sigMdlNames = fitTypes(sigMdls); % significant model types
+    sigAICs = allAICs(sigMdls); % significant AIC values
+    [~,idx] = min(sigAICs); % find best model (lowest AIC)
+    bestMdl = sigMdlNames(idx); % best model name
+    if all(sigMdls == false)
+        % no significant models found
+        disp(strcat(cellType(nc)," no significant model found."));
+    else
+        % COMPUTE POINTS ALONG MODEL
+        yFit = feval(fits.(bestMdl).fitobject, xFine);
+        plot(xFine+xSp(nc),yFit,'--','Color',colors.(cellType(nc)));
+        % CALCULATE P-VALUE
+        nEl = numel(locY_vect);
+        numParams = fits.(bestMdl).output.numparam;  % number of parameters for model
+        SSE = fits.(bestMdl).gof.sse; % sum of squared errors from fit
+        SST = sum((locY_vect - mean(locY_vect)).^2);
+        SSR = SST - SSE;
+        df1 = numParams - 1; % model df (excluding intercept)
+        df2 = nEl - numParams; % residual df
+        F = (SSR/df1) / (SSE/df2);
+        pValue_overall = 1 - fcdf(F, df1, df2);
+        adjRSq = fits.(bestMdl).gof.adjrsquare;
+        % DISPLAY OUTPUTS
+        disp(strcat(cellType(nc)," ",bestMdl,": p-val. = ",num2str(pValue_overall,3),", r-sq. = ",...
+            num2str(adjRSq,3)));
+    end
+end
+
 %% EVALUATE WITH MODEL FITS AND PLOT
 figure('color',[1 1 1]);
 tiledlayout(1,3,'TileSpacing','compact','Padding','compact');
