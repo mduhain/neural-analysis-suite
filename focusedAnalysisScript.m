@@ -329,6 +329,34 @@ end
 end
 
 
+%% COUNTS PER SESSION
+
+temp = zeros(size(is.sessID,2),6);
+for ns = 1 : size(is.sessID,2)
+    temp(ns,1) = sum(is.sessID(:,ns) & is.PV); % total INH
+    temp(ns,2) = sum(is.sessID(:,ns) & is.PV & is.selective); % total selective INH
+    temp(ns,3) = sum(is.sessID(:,ns) & is.SOM); % total INH
+    temp(ns,4) = sum(is.sessID(:,ns) & is.SOM & is.selective); % total selective INH
+    temp(ns,5) = sum(is.sessID(:,ns) & is.EXC); % total EXC
+    temp(ns,6) = sum(is.sessID(:,ns) & is.EXC & is.selective); % total selective EXC
+end
+
+figure;
+subplot(1,3,1); hold on;
+histogram(temp(:,1)); histogram(temp(:,2));
+xlabel("number of neurons"); ylabel("number of sessions");
+title("PV"); legend({"all nuerons","selective"});
+
+subplot(1,3,2); hold on;
+histogram(temp(:,3)); histogram(temp(:,4));
+xlabel("number of neurons"); ylabel("number of sessions");
+title("SOM"); legend({"all nuerons","selective"});
+
+subplot(1,3,3); hold on;
+histogram(temp(:,5)); histogram(temp(:,6));
+xlabel("number of neurons"); ylabel("number of sessions");
+title("EXC"); legend({"all nuerons","selective"});
+
  %% LOAD TO HERE
 
 % cd('C:\Users\skich\Desktop\WORK');

@@ -17,6 +17,10 @@ targetAmp = 5; % Amplitude value to decode with; [0.33 0.76 1.6 3.5 7.7] um
 onlyEXC = false; % Decoding with only EXC neurons in sessions
 lateRespWin = false; % Decoding using the later response window (3-4 sec post-stim)
 onlyFreqSel = false; % Decoding with only frequency-selective units
+balancedExcInh = true; % Decoding with balanced number of neurons, compring (EXC+INH) vs (EXC-alone)
+trueRandomSamp = false; % Decoding with set number of neurons (numExc), regardless of cell type
+numInh = 10; % Decoding with fixed number of INH and EXC (USE balancedExcInh = true)
+numExc = 50; % Decoding with fixed number of INH and EXC (USE balancedExcInh = true)
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -28,6 +32,7 @@ PCFall = cell(nIter,length(sessIDs),length(gammaSteps),length(deltaSteps),2); % 
 PredAll = cell(nIter,length(sessIDs),length(gammaSteps),length(deltaSteps),2); % all predicted frequencies
 TrueAll = cell(nIter,length(sessIDs),length(gammaSteps),length(deltaSteps),2); % all true frequencies
 
+% start loop
 for ns = 1:length(sessIDs) %nt = 1 : length(selType)
     locSess = char(sessIDs(ns)); % local session name 'm000_00'
     locIdx = is.mouseNum(:,strcmp(mouseNums,locSess(1:4))); % all neurons/rows from this mouse
@@ -43,7 +48,7 @@ for ns = 1:length(sessIDs) %nt = 1 : length(selType)
     % loc cell types within session
     % ! PV or SOM, one of these arrays is always empty, sometimes EXC is empty
 
-    % DATASET 1 FREQUENCY SELECTIVE NEURONS
+    % DATASET 2 FREQUENCY SELECTIVE NEURONS
     if multiAmp == true && onlyFreqSel == true
         locPVs = find(is.sessID(:,ns) & is.PV & is.allMod); % loc neurons from this session
         locSOMs = find(is.sessID(:,ns) & is.SOM & is.allMod);
@@ -52,7 +57,7 @@ for ns = 1:length(sessIDs) %nt = 1 : length(selType)
         otherPVs = find(locIdx & is.PV & is.allMod); % loc neurons from this mouse (but not this session)
         otherSOMs = find(locIdx & is.SOM & is.allMod);
         otherEXCs = find(locIdx & is.EXC  & is.allMod);
-    % DATASET 2 FREQUENCY SELECTIVE NEURONS
+    % DATASET 1 FREQUENCY SELECTIVE NEURONS
     elseif multiAmp == false && onlyFreqSel == true
         locPVs = find(is.sessID(:,ns) & is.PV & is.selective); % loc neurons from this session
         locSOMs = find(is.sessID(:,ns) & is.SOM & is.selective);
@@ -61,7 +66,7 @@ for ns = 1:length(sessIDs) %nt = 1 : length(selType)
         otherPVs = find(locIdx & is.PV & is.selective); % loc neurons from this mouse (but not this session)
         otherSOMs = find(locIdx & is.SOM & is.selective);
         otherEXCs = find(locIdx & is.EXC & is.selective);
-    % DATASET 1 ALL NEURONS
+    % DATASET 2 ALL NEURONS
     elseif multiAmp == true && onlyFreqSel == false
         locPVs = find(is.sessID(:,ns) & is.PV); % loc neurons from this session
         locSOMs = find(is.sessID(:,ns) & is.SOM);
@@ -70,7 +75,7 @@ for ns = 1:length(sessIDs) %nt = 1 : length(selType)
         otherPVs = find(locIdx & is.PV); % loc neurons from this mouse (but not this session)
         otherSOMs = find(locIdx & is.SOM); 
         otherEXCs = find(locIdx & is.EXC); 
-    % DATASET 2 ALL NEURONS
+    % DATASET 1 ALL NEURONS
     elseif multiAmp == false && onlyFreqSel == false 
         locPVs = find(is.sessID(:,ns) & is.PV); % loc neurons from this session
         locSOMs = find(is.sessID(:,ns) & is.SOM); 
@@ -81,7 +86,7 @@ for ns = 1:length(sessIDs) %nt = 1 : length(selType)
         otherEXCs = find(locIdx & is.EXC);
     end
 
-    % count of neurons within this session
+    % Neuron number logic checks
     if length(locEXCs) >= locNumINH
         numNeuSess = length(locEXCs);
     elseif isempty(locEXCs) % cre-dep. gcamp expression INH only
@@ -91,7 +96,11 @@ for ns = 1:length(sessIDs) %nt = 1 : length(selType)
             continue
         end
     elseif length(locEXCs) <= locNumINH
-        numNeuSess = locNumINH;
+        if onlyEXC == true
+            numNeuSess = length(locEXCs);
+        elseif onlyEXC == false
+            numNeuSess = length(locNumINH);
+        end
     else
         error('un-expected condition met');
     end
@@ -100,17 +109,48 @@ for ns = 1:length(sessIDs) %nt = 1 : length(selType)
         disp('fewer freq.sel. neurons than min PC number');
         continue;
     end
+
+    if numNeuSess < numExc
+        disp('total num neurons than min. model size (numExc)');
+        continue;
+    end
+
+    if trueRandomSamp == true
+        numNeuSess = numExc;
+    end
+
+    if balancedExcInh == true
+        if length(cat(1,locPVs,locSOMs)) < numInh
+            disp('fewer inh. neurons than min sample size (numInh)');
+            continue;
+        elseif length(locEXCs) < numExc
+            disp('fewer exc. neurons than min sample size (numExc)');
+            continue;
+        end
+    end
     
     % reiterate random draws
     for nj = 1:nIter
         
         % build array: session neurons (all EXC) or (some EXC + all INH)
         if onlyEXC == true
-            sessNeus = locEXCs; % use all EXC neurons available
+            sessNeus = randsample(locEXCs,numExc,false); % random draw of EXC neurons
         elseif onlyEXC == false
-            locExcNum = length(locEXCs) - locNumINH; % use fewer EXC neurons to make room for INH neurons
-            subSampledEXC = randsample(locEXCs,locExcNum,false); 
-            sessNeus = cat(1,locPVs,locSOMs,subSampledEXC); % combine INH and EXC neurons 
+            if balancedExcInh == true
+                subSampledEXC = randsample(locEXCs,numExc,false); % random draw of EXC neurons
+                subSampledINH = randsample(cat(1,locPVs,locSOMs),numInh,false); % Random draw of INH neurons
+                sessNeus = cat(1,subSampledINH,subSampledEXC); % combine INH and EXC neurons 
+                numNeuSess = length(sessNeus);
+            elseif balancedExcInh == false
+                if trueRandomSamp == false
+                    locExcNum = length(locEXCs) - locNumINH; % use fewer EXC neurons to make room for INH neurons
+                    subSampledEXC = randsample(locEXCs,locExcNum,false); 
+                    sessNeus = cat(1,locPVs,locSOMs,subSampledEXC); % combine INH and EXC neurons 
+                elseif trueRandomSamp == true
+                    sessNeus = cat(1,locPVs,locSOMs,locEXCs); % combine all INH and EXC neurons
+                    sessNeus = randsample(sessNeus,numExc,false); %random sample of 50
+                end
+            end
         end
 
         % build array: pseudo populations to match sess cells
@@ -342,6 +382,8 @@ elseif onlyEXC == false && lateRespWin == false
 end
 
 %% PV+EXC vs. SOM+EXC
+% load("dataset1_withinSess_EXCPV_v_EXCSOM.mat");
+
 figure('Color',[1 1 1]); hold on;
 % tiledlayout(4,4);
 
@@ -362,25 +404,147 @@ histogram(accSOM,'Normalization','percentage','NumBins',10,'FaceAlpha',0.5,'Face
 ylabel('% of sessions','FontName','Arial');
 xlabel('Decoding accuracy (%)','FontName','Arial');
 title('Within-session frequency decoding','FontName','Arial');
-set(gca,'XLim',[7 77],'YLim',[0 21]);
+yMaxLim = 25;
+set(gca,'XLim',[7 67],'YLim',[0 yMaxLim]);
 
 % nexttile([1 4]); hold on;
 meanPV = mean(accPV);
 ciPV = mkCI(accPV);
-errorbar(meanPV,20,ciPV(2)-meanPV,'horizontal','Color',colors.PV,'LineWidth',1);
-plot(meanPV,20,'.','MarkerSize',10,'Color',colors.PV);
+plot([meanPV meanPV],[0 yMaxLim],'--','Color',colors.PV,'LineWidth',1.5);
+plot([ciPV(1) ciPV(1)],[0 yMaxLim],':','Color',colors.PV,'LineWidth',1);
+plot([ciPV(2) ciPV(2)],[0 yMaxLim],':','Color',colors.PV,'LineWidth',1);
+% errorbar(meanPV,20,ciPV(2)-meanPV,'horizontal','Color',colors.PV,'LineWidth',1);
+% plot(meanPV,20,'.','MarkerSize',10,'Color',colors.PV);
+
 meanSOM = mean(accSOM);
 ciSOM = mkCI(accSOM);
-errorbar(meanSOM,20,ciSOM(2)-meanSOM,'horizontal','Color',colors.SOM,'LineWidth',1);
-plot(meanSOM,20,'.','MarkerSize',10,'Color',colors.SOM);
+plot([meanSOM meanSOM],[0 yMaxLim],'--','Color',colors.SOM,'LineWidth',1.5);
+plot([ciSOM(1) ciSOM(1)],[0 yMaxLim],':','Color',colors.SOM,'LineWidth',1);
+plot([ciSOM(2) ciSOM(2)],[0 yMaxLim],':','Color',colors.SOM,'LineWidth',1);
+% errorbar(meanSOM,20,ciSOM(2)-meanSOM,'horizontal','Color',colors.SOM,'LineWidth',1);
+% plot(meanSOM,20,'.','MarkerSize',10,'Color',colors.SOM);
 legend({'PV+EXC','SOM+EXC',''},'Box','off','FontName','Arial');
 
 % Stats test
 [pVal, obsStat, permStats] = permTest2sample(accPV,accSOM,100000);
 if pVal < 0.05
-    text(mean([meanPV meanSOM]),20.5,'*','FontName','Arial','FontSize',10,'HorizontalAlignment','center',...
+    text(mean([meanPV meanSOM]),20.5,'*','FontName','Arial','FontSize',14,'HorizontalAlignment','center',...
         'VerticalAlignment','middle');
 end
+
+%% EXC-alone vs EXC+INH (PV and SOM)
+% load("dataset1_withinSess_comparisons.mat"); % "PCTall_ExcAlone","PCTall_Mix"
+PCTmixd = mean(PCTall_Mix,1)';
+PCTexc = mean(PCTall_ExcAlone,1)';
+
+sessPV = zeros(length(PCTexc),1);
+sessSOM = zeros(length(PCTexc),1);
+for ns = 1 : length(sessIDs)
+    if any(is.sessID(:,ns) & is.PV) % PV session
+        sessPV(ns) = 1;
+    elseif any(is.sessID(:,ns) & is.SOM) % SOM session
+        sessSOM(ns) = 1;
+    end
+end
+
+% Increase in model accuracy when including INH neurons, all sess
+accPV = [];
+accSOM = [];
+accDeltaPV = [];
+accDeltaSOM = [];
+for ns = 1 : length(sessIDs)
+    if PCTexc(ns) ~= 0 % session with non-zero avg accuracy
+        if any(is.sessID(:,ns) & is.PV) % PV session
+            % accPV = cat(1,accPV,PCTmixd(ns));
+            accPV = cat(1,accPV,PCTexc(ns));
+            accDelta = PCTmixd(ns) - PCTexc(ns); % acc change when including INH neurons
+            accDeltaPV = cat(1,accDeltaPV,accDelta);
+        elseif any(is.sessID(:,ns) & is.SOM) % SOM session
+            % accSOM = cat(1,accSOM,PCTmixd(ns));
+            accSOM = cat(1,accSOM,PCTexc(ns));
+            accDelta = PCTmixd(ns) - PCTexc(ns);
+            accDeltaSOM = cat(1,accDeltaSOM,accDelta);
+        end
+    end
+end
+accPV = accPV*100;
+accSOM = accSOM*100;
+
+% HISTOGRAM: OVERALL ACCURACY EXC+PV v. EXC+SOM
+figure('Color',[1 1 1]); hold on;
+histogram(accPV,'Normalization','percentage','NumBins',10,'FaceAlpha',0.5,'FaceColor',colors.PV);
+histogram(accSOM,'Normalization','percentage','NumBins',10,'FaceAlpha',0.5,'FaceColor',colors.SOM);
+ylabel('% of sessions','FontName','Arial');
+xlabel('Decoding accuracy (%)','FontName','Arial');
+title('Within-session frequency decoding','FontName','Arial');
+set(gca,'XLim',[7 77],'YLim',[0 22]);
+meanPV = mean(accPV);
+ciPV = mkCI(accPV);
+plot([meanPV meanPV],[0 22],'--','Color',colors.PV,'LineWidth',1.5);
+plot([ciPV(1) ciPV(1)],[0 22],':','Color',colors.PV,'LineWidth',1);
+plot([ciPV(2) ciPV(2)],[0 22],':','Color',colors.PV,'LineWidth',1);
+meanSOM = mean(accSOM);
+ciSOM = mkCI(accSOM);
+plot([meanSOM meanSOM],[0 22],'--','Color',colors.SOM,'LineWidth',1.5);
+plot([ciSOM(1) ciSOM(1)],[0 22],':','Color',colors.SOM,'LineWidth',1);
+plot([ciSOM(2) ciSOM(2)],[0 22],':','Color',colors.SOM,'LineWidth',1);
+% legend({'PV+EXC','SOM+EXC',''},'Box','off','FontName','Arial');
+legend({'EXC(PV)','EXC(SOM)',''},'Box','off','FontName','Arial');
+% Stats test
+[pVal, obsStat, permStats] = permTest2sample(accPV,accSOM,100000);
+if pVal < 0.05
+    text(mean([meanPV meanSOM]),20.5,'*','FontName','Arial','FontSize',14,'HorizontalAlignment','center',...
+        'VerticalAlignment','middle');
+end
+
+
+
+
+
+% HISTOGRAM: ACCURACY DELTA ADDING INH NEURONS
+figure('Color',[1 1 1]); hold on;
+histogram(accPV*100,'Normalization','percentage','FaceAlpha',0.5,'FaceColor',colors.PV,'BinWidth',0.5);
+histogram(accSOM*100,'Normalization','percentage','FaceAlpha',0.5,'FaceColor',colors.SOM,'BinWidth',0.5);
+ylabel('% of sessions','FontName','Arial');
+xlabel('Decoding accuracy (%)','FontName','Arial');
+title('Within-session frequency decoding','FontName','Arial');
+% set(gca,'XLim',[7 77],'YLim',[0 22]);
+
+
+% PLOT ACC GAIN PER INH TYPE, MATCHED EXC DECODING STRENGTH
+figure('Color',[1 1 1]); hold on;
+accComp = []; % accuracy compared between PV (col.1) and SOM (col.2)
+for ns = 1 : length(sessIDs)
+    if PCTexc(ns) ~= 0 % session with non-zero avg accuracy
+        if any(is.sessID(:,ns) & is.PV) % PV session
+            accDelta = (PCTmixd(ns) - PCTexc(ns))*100; % acc change when including INH neurons
+            % find nearest accuracy session from other inh type
+            [val,idx] = min(abs(PCTexc.*sessSOM-PCTexc(ns)));
+            accDeltaMatched = (PCTmixd(idx) - PCTexc(idx))*100;
+            accComp = cat(1,accComp,[accDelta accDeltaMatched]);
+            % plot values on current figure
+            plot(1,accDelta,'o','Color',colors.PV);
+            plot(2,accDeltaMatched,'o','Color',colors.SOM);
+            plot([1 2],[accDelta accDeltaMatched],'-','Color',[.8 .8 .8]);
+        elseif any(is.sessID(:,ns) & is.SOM) % SOM session
+            accDelta = (PCTmixd(ns) - PCTexc(ns))*100;
+            % find nearest accuracy session from other inh type
+            [val,idx] = min(abs(PCTexc.*sessPV-PCTexc(ns)));
+            accDeltaMatched = (PCTmixd(idx) - PCTexc(idx))*100;
+            accComp = cat(1,accComp,[accDeltaMatched accDelta]);
+            % plot values to current figure
+            plot(2,accDelta,'o','Color',colors.SOM);
+            plot(1,accDeltaMatched,'o','Color',colors.PV);
+            plot([1 2],[accDeltaMatched accDelta],'-','Color',[.8 .8 .8]);
+        end
+    end
+end
+ylabel('% accuracy gain','FontName','Arial');
+xlabel('Inhibitory type included','FontName','Arial');
+set(gca,'XTick',[1 2],'XTickLabels',{'PV','SOM'},'XLim',[0.8 2.2])
+title('Inhibitory contribution to decoding accuracy','FontName','Arial');
+
+  
 
 
 %% Confusion Matrix (old version)
