@@ -24,6 +24,11 @@ numExc = 50; % Decoding with fixed number of INH and EXC (USE balancedExcInh = t
 
 % - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+
+
+
+
+
 % CREATE OUTPUT ARRAYS
 PCTall = zeros(nIter,length(sessIDs),length(gammaSteps),length(deltaSteps),2); % (nj,ns,ng,ne,sess vs pseudopop)
 MDLall = cell(nIter,length(sessIDs),length(gammaSteps),length(deltaSteps),2); % (nj,ns,ng,nd)

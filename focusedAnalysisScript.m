@@ -45,8 +45,9 @@ d1AmpVals = zscore(ampValsOg);
 %% DECLARE ACTIVE DATASET
 
 % USER INPUTS (CHANGE THESE)
-Tc = T1; % <---- % T1 (Dataset1), T2 (dataset2)
-minTrialNum = 25; % 25 (Dataset1) | 15 (Dataset2)
+Tc = T2; % <---- % T1 (Dataset1), T2 (dataset2)
+minTrialNum = 15; % 25 (Dataset1) | 15 (Dataset2)
+% ------------------------------------------------
 
 clear T1 T2 % remove others from memory to save RAM
 % cellType = unique(Tc.identity);
@@ -328,7 +329,6 @@ for nm = 1 : size(is.mouseNum,2)
 end
 end
 
-
 %% COUNTS PER SESSION
 
 temp = zeros(size(is.sessID,2),6);
@@ -361,8 +361,8 @@ title("EXC"); legend({"all nuerons","selective"});
 
 % cd('C:\Users\skich\Desktop\WORK');
 % cd('C:\Users\skich\Box\Tactile_Synchrony\2P-Data\Cleaned\datasets');
-cd('D:\Tactile_Synchrony\2P-Data\Cleaned\datasets')
 
+cd('D:\Tactile_Synchrony\2P-Data\Cleaned\datasets')
 load('dataset2_forFigures.mat');
 
 % load('dataset1_forFigures.mat');
@@ -371,23 +371,86 @@ load('dataset2_forFigures.mat');
 % addpath('C:\Users\skich\Box\Tactile_Synchrony\Haptics-2P\Analysis');
 % cd('C:\Users\skich\Documents\GitHub\neural-analysis-suite');
 
-% % ANALYSIS SCRIPS
-%
-% FAS_data1_removeAmpCorr.m   
-% FAS_multiCompare.m    
-% FAS_simultaneousDecode.m   
-% FAS_decodeAmp.m   
-% FAS_omit700Hz.m     
-% FAS_titrateNumPCs.m
-% FAS_decodeFreqWithAmp.m  
-% FAS_selTypePerf_allCells.m  
-% FAS_titrateSelectivity.m 
-% FAS_indvMouseOmit.m  
-% FAS_selTypePerformance.m 
-% FAS_tuningHeatmap.m 
-% FAS_Dataset2Figures.m
-% FAS_trainingEffectFigures.m
-% FAS_selTypePerf_allCells_ampAndFreq.m
+%%  ===  FURTHER ANALYSIS SCRIPTS  ===
+
+% BEGIN ANALYSIS SCRIPT LIST
+
+
+% Within session frequency decoding
+FAS_decodeFreq_bySession.m
+
+% Amplitude decoding
+FAS_decodeAmp.m 
+
+% Decoding performance across all cells by Selectivity Type (e.g F,A,F+A,F*A) DATASET 2
+FAS_selTypePerf_allCells.m 
+
+% Neuron correlation and Frequency Decoding relationship
+FAS_neuCorrByFreqDecoding.m 
+
+% Main manuscript figures for dataset 2 (freq & amp mixing)
+FAS_Dataset2Figures.m
+
+% Decoding performance across all cells frequency selective vs. random draws DATASET 1
+FAS_selTypePerformance.m
+
+% Within session frequency decoding, titrate in a mixture of inhibitory neurons
+FAS_decodeFreq_bySession_withTitr.m
+
+%  Decode freq then amp sequentially from the same set of neurons
+FAS_selTypePerf_allCells_ampAndFreq.m
+
+% Performance by Selectivity Type from mixtures of cell types
+FAS_selTypePerf_mixCellTypes.m
+
+% Figures for Training Effect seen in DATASET 2
+FAS_trainingEffectFigures.m
+
+% Frequency decoding with a varying number of PC predictors used
+FAS_titrateNumPCs.m
+
+% Amplitude decoding with a varying number of PC predictors used
+FAS_titrateNumPCs_ampDecode.m
+
+% Decode all 25 stimuli (Freq X Amplitude) simultaneously DATASET 2
+FAS_simultaneousDecode.m 
+
+% Frequency decoding with a varied number of frequency selective units
+FAS_titrateSelectivity.m 
+
+% Frequency decoding performance by cell type, without amplitude correlated neurons
+FAS_data1_removeAmpCorr.m  
+FAS_multiCompare.m % plots only, loads in pre-computed dataset
+
+% Frequency decoding performance by cell type without 700Hz (and 100Hz) DATASET 1
+FAS_omit700Hz.m  
+
+% Frequency-tuning heatmaps by cell type (Prsa et. al. style)
+FAS_tuningHeatmap.m 
+
+% FRequency decoding performance with specific mice)
+FAS_indvMouseOmit.m  
+
+% Aplitude decoding
+FAS_decodeAmp.m  
+
+% Decode stimuli with both frequency and amplitude information
+FAS_decodeFreqWithAmp.m  
+
+
+
+
+
+
+
+
+
+
+
+%% OLD PLOTS
+
+
+
 
 
 %% NEURON AMPLITUDE CORRELATIONS PLOT

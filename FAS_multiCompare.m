@@ -3,7 +3,6 @@
 %
 %
 
-cd('C:\Users\skich\Desktop\WORK');
 % load("modelResults_dataset1_multiCompare.mat");
 
 figure('theme','light','color',[1 1 1]); hold on;

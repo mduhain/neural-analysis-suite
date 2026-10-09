@@ -5,13 +5,11 @@
 
 %% LOAD IN DATA
 
-cd('C:\Users\skich\Desktop\WORK')
 load("modelAccuracy_dataset2_ampDecode_selVsRandom.mat"); % FREQ.SEL vs ALL.NEURONS vs RAND.SHUFFLE
 
 load("modelAccuracy_dataset2_ampDecode_allSelTypes.mat");
 
 is.any = true(size(is.allMod));
-cd('C:\Users\skich\Box\Tactile_Synchrony\Manuscript\Figures\Fig6')
 
 %% perform population decoding
 

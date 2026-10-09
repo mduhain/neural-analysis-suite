@@ -24,8 +24,8 @@
 % tic; load("C:\Users\skich\Desktop\modelResults_PCTall3_MDLall3.mat"); toc;
 
 % DATA: FreqSel VS All neurons VS random shuffle (2025-11-19)
-cd('C:\Users\skich\Desktop\WORK');
-load('modelAccuracy_dataset2_allFreqSel.mat');
+% cd('C:\Users\skich\Desktop\WORK');
+% load('modelAccuracy_dataset2_allFreqSel.mat');
 % [1] Amplitude
 % [2] Repetitions
 % [3] Source (FreqSel, AllNeurons, RandomShuffleData)
@@ -33,8 +33,8 @@ load('modelAccuracy_dataset2_allFreqSel.mat');
 % [3] CellType
 
 % DATA: 4 SEL TYPES (2025-11-19)
-cd('C:\Users\skich\Desktop\WORK');
-load('modelAccuracy_dataset2_allSelTypes.mat');
+% cd('C:\Users\skich\Desktop\WORK');
+% load('modelAccuracy_dataset2_allSelTypes.mat');
 
 
 %% perform population decoding
